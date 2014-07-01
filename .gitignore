@@ -1,0 +1,10 @@
+/src/iscsitarget-1.4.20/usr/*.o
+/src/iscsitarget-1.4.20/kernel/*.o
+/src/iscsitarget-1.4.20/kernel/*.cmd
+/src/iscsitarget-1.4.20/kernel/*.symvers
+/src/iscsitarget-1.4.20/kernel/*.order
+/src/iscsitarget-1.4.20/kernel/*.ko
+/src/iscsitarget-1.4.20/kernel/*.ko*
+/src/iscsitarget-1.4.20/kernel/.tmp_version*
+/src/iscsitarget-1.4.20/usr/ietd
+/src/iscsitarget-1.4.20/usr/ietadm
