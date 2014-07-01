@@ -1,0 +1,40 @@
+#!/sbin/runscript
+#
+# Start the iSCSI Enterprise Target.
+#
+# To define start-up options, create a config file called
+# /etc/conf.d/iscsi-target, in it define OPTIONS="...".
+
+depend()
+{
+	use net
+	need localmount
+	after bootmisc
+}
+
+start()
+{
+	ebegin "Starting iSCSI Target"
+	modprobe -q crc32c
+	modprobe iscsi_trgt
+	start-stop-daemon --start --exec /usr/sbin/ietd --pidfile /var/run/iscsi_trgt.pid -- $OPTIONS
+	eend $?
+}
+
+stop()
+{
+	ebegin "Stopping iSCSI Target"
+	ietadm --op delete
+	start-stop-daemon --stop --exec /usr/sbin/ietd --pidfile /var/run/iscsi_trgt.pid
+	rm -f /var/run/iscsi_trgt.pid
+	modprobe -r iscsi_trgt
+	eend $?
+}
+
+restart()
+{
+	stop
+	sleep 1
+	start
+}
+

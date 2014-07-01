@@ -1,0 +1,95 @@
+Index: kernel/volume.c
+===================================================================
+--- a/kernel/volume.c	(revision 205)
++++ b/kernel/volume.c	(working copy)
+@@ -11,6 +11,7 @@
+ #include "iscsi.h"
+ #include "iscsi_dbg.h"
+ #include "iotype.h"
++#include "seq_list.h"
+ 
+ struct iet_volume *volume_lookup(struct iscsi_target *target, u32 lun)
+ {
+Index: kernel/seq_list.c
+===================================================================
+--- a/kernel/seq_list.c	(revision 0)
++++ b/kernel/seq_list.c	(revision 0)
+@@ -0,0 +1,34 @@
++/*
++ * seq_list_* API lifted from the kernel's seq_file.c for backward compatibility
++ * with kernels < 2.6.23
++ */
++
++#include <linux/list.h>
++
++struct list_head *seq_list_start(struct list_head *head, loff_t pos)
++{
++	struct list_head *lh;
++
++	list_for_each(lh, head)
++		if (pos-- == 0)
++			return lh;
++
++	return NULL;
++}
++
++struct list_head *seq_list_start_head(struct list_head *head, loff_t pos)
++{
++	if (!pos)
++		return head;
++
++	return seq_list_start(head, pos - 1);
++}
++
++struct list_head *seq_list_next(void *v, struct list_head *head, loff_t *ppos)
++{
++	struct list_head *lh;
++
++	lh = ((struct list_head *)v)->next;
++	++*ppos;
++	return lh == head ? NULL : lh;
++}
+Index: kernel/target.c
+===================================================================
+--- a/kernel/target.c	(revision 205)
++++ b/kernel/target.c	(working copy)
+@@ -7,6 +7,7 @@
+ #include "iscsi.h"
+ #include "digest.h"
+ #include "iscsi_dbg.h"
++#include "seq_list.h"
+ 
+ #define	MAX_NR_TARGETS	(1UL << 30)
+ 
+Index: kernel/seq_list.h
+===================================================================
+--- a/kernel/seq_list.h	(revision 0)
++++ b/kernel/seq_list.h	(revision 0)
+@@ -0,0 +1,16 @@
++/*
++ * seq_list_* API lifted from the kernel's seq_file.c for backward compatibility
++ * with kernels < 2.6.23
++ */
++
++#ifndef __SEQ_LIST_H
++#define __SEQ_LIST_H
++
++#include <linux/seq_file.h>
++#include <linux/list.h>
++
++struct list_head *seq_list_start(struct list_head *head, loff_t pos);
++struct list_head *seq_list_start_head(struct list_head *head, loff_t pos);
++struct list_head *seq_list_next(void *v, struct list_head *head, loff_t *ppos);
++
++#endif
+Index: kernel/Makefile
+===================================================================
+--- a/kernel/Makefile	(revision 205)
++++ b/kernel/Makefile	(working copy)
+@@ -13,5 +13,5 @@ obj-m		+= iscsi_trgt.o
+ iscsi_trgt-objs	:= tio.o iscsi.o nthread.o wthread.o config.o digest.o \
+ 			conn.o session.o target.o volume.o iotype.o \
+ 			file-io.o null-io.o target_disk.o event.o param.o \
+-			block-io.o ua.o
++			block-io.o ua.o seq_list.o
+ 

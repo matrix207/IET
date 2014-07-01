@@ -1,0 +1,29 @@
+New functionality of initiators.allow/deny
+==========================================
+
+Prior to version 0.4.18 the way initiators.allow and initiators.deny
+worked was to read initiators.deny for any targets that matched and
+to blacklist any initiator ip addresses listed there, UNLESS the
+initiators' ip address is also explicitly allowed by an entry in
+initiators.allow.
+
+From version 0.4.18 on we are depreciating initiators.deny all
+together in favor of an implicit deny on any failure to match
+a target or initiator in initiators.allow. This provides all the
+flexibility of the two files with one less file to worry about
+misconfiguring.
+
+For backwards compatibility while we phase out initiators.deny,
+if initiators.deny exists then we will USE THE OLD METHOD, if it
+doesn't exist then we will use the newer implicit deny method.
+
+On new installations we will not install initiators.deny, but we
+will still distribute the example version under the etc directory
+in the archive. We will also not overwrite or delete existing
+versions of these files on install.
+
+Also, new versions of initiators.allow will have the default
+"ALL ALL" line at the bottom to allow any initiator access to
+any target.
+
+

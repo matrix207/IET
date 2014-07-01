@@ -1,0 +1,12 @@
+diff --git a/kernel/event.c b/kernel/event.c
+index 240404d..e45ed67 100644
+--- a/kernel/event.c
++++ b/kernel/event.c
+@@ -92,5 +92,6 @@ int event_init(void)
+ 
+ void event_exit(void)
+ {
+-	netlink_kernel_release(nl);
++	if (nl)
++		sock_release(nl->sk_socket);
+ }

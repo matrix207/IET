@@ -1,0 +1,11 @@
+--- sector2/kernel/block-io.c	2010-03-01 11:44:57.000000000 -0500
++++ sector2/kernel/block-io.c.30	2010-03-01 11:50:00.000000000 -0500
+@@ -280,7 +280,7 @@ blockio_attach(struct iet_volume *volume
+ 	err = parse_blockio_params(volume, args);
+ 	if (!err) {
+ 		/* see Documentation/ABI/testing/sysfs-block */
+-		unsigned bsz = bdev_logical_block_size(bio_data->bdev);
++		unsigned bsz = bdev_hardsect_size(bio_data->bdev);
+ 		if (!volume->blk_shift)
+ 			volume->blk_shift = ilog2(bsz);
+ 		else if (volume->blk_shift < ilog2(bsz)) {

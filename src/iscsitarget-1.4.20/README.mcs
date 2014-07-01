@@ -1,0 +1,32 @@
+Multiple Connections per Session
+================================
+
+Starting in 1.4.20 IET has experimental support for multiple
+connections per session (MC/S).
+
+IET always supported multiple sessions by a given initiator, but
+since SCSI command ordering can only be preserved within a session
+this meant that commands could (and over time will) be issued
+out-of-order which causes sequential operations to randomize over
+time reducing the effective throughput considerably.
+
+By utilizing multiple connections per session this eliminates the
+need to use multiple sessions and MPIO on the host system, as the
+abstraction appears to the host system as a single disk and it is
+up to the initiator to handle the distribution of SCSI commands
+over the connections of a session.
+
+It should be noted though, that on the initiator side one should
+use either MC/S OR MPIO for a target-initiator pair as on many
+operating systems the behavior is undefined when using both. Linux
+maintainers have decided to only support MPIO for it's initiators.
+Microsoft supports both, but says that using both at once on a
+given target-initiator pair is unsupported.
+
+IET being an iSCSI target really doesn't care either way, as it
+will process commands in the order per the RFC spec, but it is
+highly recommend you don't use both at once unless MPIO is used in
+a strictly active-passive fail-over fashion, while MC/S is used
+active-active, any other combination of MPIO and MC/S will most
+likely find you in trouble.
+

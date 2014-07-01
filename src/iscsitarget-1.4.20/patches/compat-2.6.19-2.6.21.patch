@@ -1,0 +1,56 @@
+Index: kernel/event.c
+===================================================================
+--- 1/kernel/event.c	(working copy)
++++ 2/kernel/event.c	(revision 122)
+@@ -95,8 +95,7 @@ int event_send(u32 tid, u64 sid, u32 cid
+
+ int event_init(void)
+ {
+-	nl = netlink_kernel_create(NETLINK_IET, 1, event_recv, NULL,
+-				   THIS_MODULE);
++	nl = netlink_kernel_create(NETLINK_IET, 1, event_recv, THIS_MODULE);
+ 	if (!nl)
+ 		return -ENOMEM;
+ 	else
+Index: kernel/iscsi.c
+===================================================================
+--- 1/kernel/iscsi.c	(working copy)
++++ 2/kernel/iscsi.c	(revision 137)
+@@ -1925,7 +1925,8 @@ static int iscsi_init(void)
+ 	if ((err = event_init()) < 0)
+ 		goto err;
+
+-	iscsi_cmnd_cache = KMEM_CACHE(iscsi_cmnd, 0);
++	iscsi_cmnd_cache = kmem_cache_create("iscsi_cmnd", sizeof(struct iscsi_cmnd),
++					     0, 0, NULL, NULL);
+ 	if (!iscsi_cmnd_cache)
+ 		goto err;
+
+Index: kernel/tio.c
+===================================================================
+--- 1/kernel/tio.c	(working copy)
++++ 2/kernel/tio.c	(revision 137)
+@@ -110,7 +110,8 @@ int tio_sync(struct iet_volume *lu, stru
+
+ int tio_init(void)
+ {
+-	tio_cache = KMEM_CACHE(tio, 0);
++	tio_cache = kmem_cache_create("tio", sizeof(struct tio),
++				      0, 0, NULL, NULL);
+ 	return  tio_cache ? 0 : -ENOMEM;
+ }
+ 
+Index: kernel/ua.c
+===================================================================
+--- 1/kernel/ua.c
++++ 2/kernel/ua.c
+@@ -18,7 +18,8 @@ static struct kmem_cache *ua_cache;
+
+ int ua_init(void)
+ {
+-	ua_cache = KMEM_CACHE(ua_entry, 0);
++	ua_cache = kmem_cache_create("iet_ua_cache", sizeof(struct ua_entry),
++				     0, 0, NULL, NULL);
+ 	if (!ua_cache) {
+ 		eprintk("%s", "Failed to create ua cache\n");
+ 		return -ENOMEM;

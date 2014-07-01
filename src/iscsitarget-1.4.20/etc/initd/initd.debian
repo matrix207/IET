@@ -1,0 +1,76 @@
+#!/bin/sh
+#
+# chkconfig: - 39 35
+# description: Starts and stops the iSCSI target
+# debianized start-stop script
+
+PATH=/sbin:/bin:/usr/sbin:/usr/bin
+DAEMON=/usr/sbin/ietd
+OPTIONS=""
+PIDFILE=/var/run/iscsi_trgt.pid
+
+if [ -f /lib/init/vars.sh ]; then
+	. /lib/init/vars.sh
+fi
+
+if [ -f /lib/lsb/init-functions ]; then
+	. /lib/lsb/init-functions
+fi
+
+if [ -f /etc/sysconfig/iscsi-target ]; then
+	. /etc/sysconfig/iscsi-target
+fi
+
+RETVAL=0
+
+ietd_start()
+{
+	log_daemon_msg "Starting iSCSI Target" "ietd"
+	modprobe -q crc32c
+	modprobe iscsi_trgt
+	start-stop-daemon --start --exec $DAEMON --pidfile $PIDFILE -- $OPTIONS
+	log_end_msg $?
+}
+
+ietd_stop()
+{
+	log_daemon_msg "Stopping iSCSI Target" "ietd"
+	ietadm --op delete
+	start-stop-daemon --stop --exec $DAEMON --pidfile $PIDFILE
+	rm -f $PIDFILE
+	modprobe -r iscsi_trgt
+	log_end_msg $?
+}
+
+ietd_status()
+{
+	PID=`pidof ietd`
+	if [ $PID ]; then
+		echo "iSCSI Target (pid $PID) is running..."
+	else
+		echo "iSCSI Target is stopped."
+		exit 1
+	fi
+}
+
+case "$1" in
+  start)
+        ietd_start
+        ;;
+  stop)
+        ietd_stop
+        ;;
+  restart)
+        ietd_stop
+	sleep 1
+	ietd_start
+        ;;
+  status)
+	ietd_status
+        ;;
+  *)
+        echo $"Usage: $0 {start|stop|restart|status}"
+        exit 1
+esac
+
+exit 0

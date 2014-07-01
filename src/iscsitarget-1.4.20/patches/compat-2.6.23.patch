@@ -1,0 +1,176 @@
+Index: kernel/block-io.c
+===================================================================
+--- 1/kernel/block-io.c	(working copy)
++++ 2/kernel/block-io.c	(revision 145)
+@@ -29,10 +29,15 @@ struct tio_work {
+ 	struct completion tio_complete;
+ };
+ 
+-static void blockio_bio_endio(struct bio *bio, int error)
++static int
++blockio_bio_endio(struct bio *bio, unsigned int bytes_done, int error)
+ {
+ 	struct tio_work *tio_work = bio->bi_private;
+ 
++	/* Ignore partials */
++	if (bio->bi_size)
++		return 1;
++
+ 	error = test_bit(BIO_UPTODATE, &bio->bi_flags) ? error : -EIO;
+ 
+ 	if (error)
+@@ -43,6 +48,8 @@ static void blockio_bio_endio(struct bio
+ 		complete(&tio_work->tio_complete);
+ 
+ 	bio_put(bio);
++
++	return 0;
+ }
+ 
+ /*
+Index: kernel/config.c
+===================================================================
+--- 1/kernel/config.c	(working copy)
++++ 2/kernel/config.c	(revision 145)
+@@ -42,7 +42,7 @@ int iet_procfs_init(void)
+ 	int i;
+ 	struct proc_dir_entry *ent;
+ 
+-	if (!(proc_iet_dir = proc_mkdir("iet", init_net.proc_net)))
++	if (!(proc_iet_dir = proc_mkdir("net/iet", 0)))
+ 		goto err;
+ 
+ 	proc_iet_dir->owner = THIS_MODULE;
+Index: kernel/digest.c
+===================================================================
+--- 1/kernel/digest.c	(working copy)
++++ 2/kernel/digest.c	(revision 145)
+@@ -160,17 +160,22 @@ static inline void __dbg_simulate_data_d
+ 	}
+ }
+ 
++/* Copied from linux-iscsi initiator and slightly adjusted */
++#define SETSG(sg, p, l) do {					\
++	(sg).page = virt_to_page((p));				\
++	(sg).offset = ((unsigned long)(p) & ~PAGE_CACHE_MASK);	\
++	(sg).length = (l);					\
++} while (0)
++
+ static void digest_header(struct hash_desc *hash, struct iscsi_pdu *pdu,
+ 			  u8 *crc)
+ {
+ 	struct scatterlist sg[2];
+ 	unsigned int nbytes = sizeof(struct iscsi_hdr);
+ 
+-	sg_init_table(sg, pdu->ahssize ? 2 : 1);
+-
+-	sg_set_buf(&sg[0], &pdu->bhs, nbytes);
++	SETSG(sg[0], &pdu->bhs, nbytes);
+ 	if (pdu->ahssize) {
+-		sg_set_buf(&sg[1], pdu->ahs, pdu->ahssize);
++		SETSG(sg[1], pdu->ahs, pdu->ahssize);
+ 		nbytes += pdu->ahssize;
+ 	}
+ 
+@@ -214,7 +219,6 @@ static void digest_data(struct hash_desc
+ 
+ 	assert(count <= ISCSI_CONN_IOV_MAX);
+ 
+-	sg_init_table(sg, ARRAY_SIZE(cmnd->conn->hash_sg));
+ 	crypto_hash_init(hash);
+ 
+ 	for (i = 0; size; i++) {
+@@ -223,13 +227,13 @@ static void digest_data(struct hash_desc
+ 		else
+ 			length = size;
+ 
+-		sg_set_page(&sg[i], tio->pvec[idx + i], length, offset);
++		sg[i].page = tio->pvec[idx + i];
++		sg[i].offset = offset;
++		sg[i].length = length;
+ 		size -= length;
+ 		offset = 0;
+ 	}
+ 
+-	sg_mark_end(&sg[i - 1]);
+-
+ 	crypto_hash_update(hash, sg, nbytes);
+ 	crypto_hash_final(hash, crc);
+ }
+Index: kernel/event.c
+===================================================================
+--- 1/kernel/event.c	(working copy)
++++ 2/kernel/event.c	(revision 145)
+@@ -28,7 +28,7 @@ static int event_recv_msg(struct sk_buff
+ 	return 0;
+ }
+ 
+-static void event_recv_skb(struct sk_buff *skb)
++static int event_recv_skb(struct sk_buff *skb)
+ {
+ 	int err;
+ 	struct nlmsghdr	*nlh;
+@@ -37,7 +37,7 @@ static void event_recv_skb(struct sk_buf
+ 	while (skb->len >= NLMSG_SPACE(0)) {
+ 		nlh = (struct nlmsghdr *)skb->data;
+ 		if (nlh->nlmsg_len < sizeof(*nlh) || skb->len < nlh->nlmsg_len)
+-			break;
++			return 0;
+ 		rlen = NLMSG_ALIGN(nlh->nlmsg_len);
+ 		if (rlen > skb->len)
+ 			rlen = skb->len;
+@@ -47,6 +47,19 @@ static void event_recv_skb(struct sk_buf
+ 			netlink_ack(skb, nlh, 0);
+ 		skb_pull(skb, rlen);
+ 	}
++	return 0;
++}
++
++static void event_recv(struct sock *sk, int length)
++{
++	struct sk_buff *skb;
++
++	while ((skb = skb_dequeue(&sk->sk_receive_queue))) {
++		if (event_recv_skb(skb) && skb->len)
++			skb_queue_head(&sk->sk_receive_queue, skb);
++		else
++			kfree_skb(skb);
++	}
+ }
+ 
+ static int notify(void *data, int len, int gfp_mask)
+@@ -82,8 +95,8 @@ int event_send(u32 tid, u64 sid, u32 cid
+ 
+ int event_init(void)
+ {
+-	nl = netlink_kernel_create(&init_net, NETLINK_IET, 1, event_recv_skb,
+-				   NULL, THIS_MODULE);
++	nl = netlink_kernel_create(NETLINK_IET, 1, event_recv, NULL,
++				   THIS_MODULE);
+ 	if (!nl)
+ 		return -ENOMEM;
+ 	else
+--- param/kernel/volume.c	2010-03-03 13:41:36.000000000 -0500
++++ param/kernel/volume.c	2010-03-03 13:42:04.000000000 -0500
+@@ -92,14 +92,13 @@ static void gen_scsiid(struct iet_volume
+ 		struct scatterlist sg[2];
+ 		unsigned int nbytes = 0;
+ 
+-		sg_init_table(sg, 2);
+-
+-		sg_set_buf(&sg[0], volume->target->name,
+-					strlen(volume->target->name));
+-		nbytes += strlen(volume->target->name);
+-
+-		sg_set_buf(&sg[1], &volume->lun, sizeof(volume->lun));
+-		nbytes += sizeof(volume->lun);
++		sg[0].page = virt_to_page(volume->target->name);
++		sg[0].offset = offset_in_page(volume->target->name);
++		nbytes += sg[0].length = strlen(volume->target->name);
++
++		sg[1].page = virt_to_page(&volume->lun);
++		sg[1].offset = offset_in_page(&volume->lun);
++		nbytes += sg[1].length = sizeof(volume->lun);
+ 
+ 		crypto_hash_init(&hash);
+ 		crypto_hash_update(&hash, sg, nbytes);

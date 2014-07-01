@@ -1,0 +1,263 @@
+Index: kernel/iscsi.h
+===================================================================
+--- 1/kernel/iscsi.h	(revision 105)
++++ 2/kernel/iscsi.h	(working copy)
+@@ -20,6 +20,10 @@
+ #include "iscsi_hdr.h"
+ #include "iet_u.h"
+ 
++#ifndef DECLARE_COMPLETION_ONSTACK
++# define DECLARE_COMPLETION_ONSTACK(work) DECLARE_COMPLETION(work)
++#endif
++
+ #define IET_SENSE_BUF_SIZE      18
+ 
+ struct iscsi_sess_param {
+@@ -261,8 +261,8 @@ struct iscsi_conn {
+ 	u32 write_offset;
+ 	int write_state;
+ 
+-	struct hash_desc rx_hash;
+-	struct hash_desc tx_hash;
++	struct crypto_tfm *rx_digest_tfm;
++	struct crypto_tfm *tx_digest_tfm;
+ 	struct scatterlist hash_sg[ISCSI_CONN_IOV_MAX];
+ };
+ 
+Index: kernel/digest.c
+===================================================================
+--- 1/kernel/digest.c	(revision 105)
++++ 2/kernel/digest.c	(working copy)
+@@ -12,8 +12,7 @@
+ 
+ void digest_alg_available(unsigned int *val)
+ {
+-	if (*val & DIGEST_CRC32C &&
+-	    !crypto_has_alg("crc32c", 0, CRYPTO_ALG_ASYNC)) {
++	if (*val & DIGEST_CRC32C && !crypto_alg_available("crc32c", 0)) {
+ 		printk("CRC32C digest algorithm not available in kernel\n");
+ 		*val |= ~DIGEST_CRC32C;
+ 	}
+@@ -37,22 +36,15 @@ int digest_init(struct iscsi_conn *conn)
+ 	if (!(conn->ddigest_type & DIGEST_ALL))
+ 		conn->ddigest_type = DIGEST_NONE;
+ 
+-	if (conn->hdigest_type & DIGEST_CRC32C ||
+-	    conn->ddigest_type & DIGEST_CRC32C) {
+-		conn->rx_hash.tfm = crypto_alloc_hash("crc32c", 0,
+-						      CRYPTO_ALG_ASYNC);
+-		conn->rx_hash.flags = 0;
+-		if (IS_ERR(conn->rx_hash.tfm)) {
+-			conn->rx_hash.tfm = NULL;
++	if (conn->hdigest_type & DIGEST_CRC32C || conn->ddigest_type & DIGEST_CRC32C) {
++		conn->rx_digest_tfm = crypto_alloc_tfm("crc32c", 0);
++		if (!conn->rx_digest_tfm) {
+ 			err = -ENOMEM;
+ 			goto out;
+ 		}
+ 
+-		conn->tx_hash.tfm = crypto_alloc_hash("crc32c", 0,
+-						      CRYPTO_ALG_ASYNC);
+-		conn->tx_hash.flags = 0;
+-		if (IS_ERR(conn->tx_hash.tfm)) {
+-			conn->tx_hash.tfm = NULL;
++		conn->tx_digest_tfm = crypto_alloc_tfm("crc32c", 0);
++		if (!conn->tx_digest_tfm) {
+ 			err = -ENOMEM;
+ 			goto out;
+ 		}
+@@ -73,10 +65,10 @@ out:
+  */
+ void digest_cleanup(struct iscsi_conn *conn)
+ {
+-	if (conn->tx_hash.tfm)
+-		crypto_free_hash(conn->tx_hash.tfm);
+-	if (conn->rx_hash.tfm)
+-		crypto_free_hash(conn->rx_hash.tfm);
++	if (conn->tx_digest_tfm)
++		crypto_free_tfm(conn->tx_digest_tfm);
++	if (conn->rx_digest_tfm)
++		crypto_free_tfm(conn->rx_digest_tfm);
+ }
+ 
+ /**
+@@ -167,28 +159,28 @@ static inline void __dbg_simulate_data_d
+ 	(sg).length = (l);					\
+ } while (0)
+ 
+-static void digest_header(struct hash_desc *hash, struct iscsi_pdu *pdu,
+-			  u8 *crc)
++static void digest_header(struct crypto_tfm *tfm, struct iscsi_pdu *pdu, u8 *crc)
+ {
+ 	struct scatterlist sg[2];
+-	unsigned int nbytes = sizeof(struct iscsi_hdr);
++	int i = 0;
+ 
+-	SETSG(sg[0], &pdu->bhs, nbytes);
++	SETSG(sg[i], &pdu->bhs, sizeof(struct iscsi_hdr));
++	i++;
+ 	if (pdu->ahssize) {
+-		SETSG(sg[1], pdu->ahs, pdu->ahssize);
+-		nbytes += pdu->ahssize;
++		SETSG(sg[i], pdu->ahs, pdu->ahssize);
++		i++;
+ 	}
+ 
+-	crypto_hash_init(hash);
+-	crypto_hash_update(hash, sg, nbytes);
+-	crypto_hash_final(hash, crc);
++	crypto_digest_init(tfm);
++	crypto_digest_update(tfm, sg, i);
++	crypto_digest_final(tfm, crc);
+ }
+ 
+ int digest_rx_header(struct iscsi_cmnd *cmnd)
+ {
+ 	u32 crc;
+ 
+-	digest_header(&cmnd->conn->rx_hash, &cmnd->pdu, (u8 *) &crc);
++	digest_header(cmnd->conn->rx_digest_tfm, &cmnd->pdu, (u8 *) &crc);
+ 	if (crc != cmnd->hdigest)
+ 		return -EIO;
+ 
+@@ -197,19 +189,18 @@ int digest_rx_header(struct iscsi_cmnd *
+ 
+ void digest_tx_header(struct iscsi_cmnd *cmnd)
+ {
+-	digest_header(&cmnd->conn->tx_hash, &cmnd->pdu, (u8 *) &cmnd->hdigest);
++	digest_header(cmnd->conn->tx_digest_tfm, &cmnd->pdu, (u8 *) &cmnd->hdigest);
+ }
+ 
+-static void digest_data(struct hash_desc *hash, struct iscsi_cmnd *cmnd,
++static void digest_data(struct crypto_tfm *tfm, struct iscsi_cmnd *cmnd,
+ 			struct tio *tio, u32 offset, u8 *crc)
+ {
+ 	struct scatterlist *sg = cmnd->conn->hash_sg;
+ 	u32 size, length;
+ 	int i, idx, count;
+-	unsigned int nbytes;
+ 
+ 	size = cmnd->pdu.datasize;
+-	nbytes = size = (size + 3) & ~3;
++	size = (size + 3) & ~3;
+ 
+ 	offset += tio->offset;
+ 	idx = offset >> PAGE_CACHE_SHIFT;
+@@ -219,7 +210,7 @@ static void digest_data(struct hash_desc
+ 
+ 	assert(count <= ISCSI_CONN_IOV_MAX);
+ 
+-	crypto_hash_init(hash);
++	crypto_digest_init(tfm);
+ 
+ 	for (i = 0; size; i++) {
+ 		if (offset + size > PAGE_CACHE_SIZE)
+@@ -234,8 +225,8 @@ static void digest_data(struct hash_desc
+ 		offset = 0;
+ 	}
+ 
+-	crypto_hash_update(hash, sg, nbytes);
+-	crypto_hash_final(hash, crc);
++	crypto_digest_update(tfm, sg, count);
++	crypto_digest_final(tfm, crc);
+ }
+ 
+ int digest_rx_data(struct iscsi_cmnd *cmnd)
+@@ -261,10 +252,9 @@ int digest_rx_data(struct iscsi_cmnd *cm
+ 		offset = 0;
+ 	}
+ 
+-	digest_data(&cmnd->conn->rx_hash, cmnd, tio, offset, (u8 *) &crc);
++	digest_data(cmnd->conn->rx_digest_tfm, cmnd, tio, offset, (u8 *) &crc);
+ 
+-	if (!cmnd->conn->read_overflow &&
+-	    (cmnd_opcode(cmnd) != ISCSI_OP_PDU_REJECT)) {
++	if (!cmnd->conn->read_overflow && (cmnd_opcode(cmnd) != ISCSI_OP_PDU_REJECT)) {
+ 		if (crc != cmnd->ddigest)
+ 			return -EIO;
+ 	}
+@@ -278,6 +268,6 @@ void digest_tx_data(struct iscsi_cmnd *c
+ 	struct iscsi_data_out_hdr *req = (struct iscsi_data_out_hdr *)&cmnd->pdu.bhs;
+ 
+ 	assert(tio);
+-	digest_data(&cmnd->conn->tx_hash, cmnd, tio,
++	digest_data(cmnd->conn->tx_digest_tfm, cmnd, tio,
+ 		    be32_to_cpu(req->buffer_offset), (u8 *) &cmnd->ddigest);
+ }
+Index: kernel/iscsi.c
+===================================================================
+--- 1/kernel/iscsi.c	(revision 105)
++++ 2/kernel/iscsi.c	(working copy)
+@@ -17,7 +17,7 @@
+ unsigned long debug_enable_flags;
+ unsigned long worker_thread_pool_size;
+ 
+-static struct kmem_cache *iscsi_cmnd_cache;
++static kmem_cache_t *iscsi_cmnd_cache;
+ static u8 dummy_data[PAGE_SIZE];
+ 
+ static int ctr_major;
+Index: kernel/tio.c
+===================================================================
+--- 1/kernel/tio.c	(revision 105)
++++ 2/kernel/tio.c	(working copy)
+@@ -35,7 +35,7 @@ static int tio_add_pages(struct tio *tio
+ 	return 0;
+ }
+ 
+-static struct kmem_cache *tio_cache;
++static kmem_cache_t *tio_cache;
+ 
+ struct tio *tio_alloc(int count)
+ {
+--- context/kernel/wthread.c	2010-01-25 11:27:57.000000000 -0500
++++ context/kernel/wthread.c.18	2010-01-25 11:25:43.000000000 -0500
+@@ -67,7 +67,7 @@
+ 	struct iscsi_conn *conn;
+ 	DECLARE_WAITQUEUE(wait, current);
+ 
+-	get_io_context(GFP_KERNEL, -1);
++	get_io_context(GFP_KERNEL);
+ 
+ 	if (!current->io_context)
+ 		eprintk("%s\n", "Failed to get IO context");
+--- param/kernel/volume.c	2010-04-08 18:05:38.000000000 -0400
++++ param/kernel/volume.c.18	2010-04-08 18:05:38.000000000 -0400
+@@ -84,28 +84,26 @@ static int set_scsisn(struct iet_volume 
+ /* Generate a MD5 hash of the target IQN and LUN number */
+ static void gen_scsiid(struct iet_volume *volume)
+ {
+-	struct hash_desc hash;
++	struct crypto_tfm *tfm;
+ 
+-	hash.tfm = crypto_alloc_hash("md5", 0, CRYPTO_ALG_ASYNC);
+-	hash.flags = 0;
++	tfm = crypto_alloc_tfm("md5", 0);
+ 
+-	if (hash.tfm) {
++	if (tfm) {
+ 		struct scatterlist sg[2];
+-		unsigned int nbytes = 0;
+ 
+ 		sg[0].page = virt_to_page(volume->target->name);
+ 		sg[0].offset = offset_in_page(volume->target->name);
+-		nbytes += sg[0].length = strlen(volume->target->name);
++		sg[0].length = strlen(volume->target->name);
+ 
+ 		sg[1].page = virt_to_page(&volume->lun);
+ 		sg[1].offset = offset_in_page(&volume->lun);
+-		nbytes += sg[1].length = sizeof(volume->lun);
++		sg[1].length = sizeof(volume->lun);
+ 
+-		crypto_hash_init(&hash);
+-		crypto_hash_update(&hash, sg, nbytes);
+-		crypto_hash_final(&hash, volume->scsi_id);
++		crypto_digest_init(tfm);
++		crypto_digest_update(tfm, sg, 2);
++		crypto_digest_final(tfm, volume->scsi_id);
+ 
+-		crypto_free_hash(hash.tfm);
++		crypto_free_tfm(tfm);
+ 	} else {
+ 		/* If no MD5 available set ID to TID and LUN */
+ 		memcpy(volume->scsi_id, &volume->target->tid,

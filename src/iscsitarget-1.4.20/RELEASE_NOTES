@@ -1,0 +1,138 @@
+               =========================================
+               Release Notes for iSCSI Enterprise Target
+               =========================================
+
+                            April 13th, 2010
+                             Version 1.4.20
+                             --------------
+
+The IET development team is pleased to announce the release of version
+1.4.20 of the iSCSI Enterprise Target.
+
+This release includes numerous bug fixes and compatibility improvements
+and it is highly recommended that all production servers be on this
+version for compatibility and stability reasons.
+
+We would like to thank all those that contributed for this release. As
+we are a small project we rely heavily on user contributions and we
+welcome all who wish to participate in improving IET.
+
+New since 1.4.19:
+
+New Features:
+- Added ability to atomically delete all targets/sessions/connections
+- Added ability to move existing kernel module on install and move
+  back on uninstall per distribution requirements (dpkg-divert)
+- Added support for logical sector sizes (512, 1024, 2048, 4096)
+  and devices whose native sector size > 512
+- Added case insensitive volume parameter processing
+- Added ability to set temporary target redirections via ietadm
+  for existing targets
+- Added support for auto-generating MD5 hash for SCSI ID, if not
+  specified, and auto-setting SCSI SN to the hex of the SCSI ID,
+  if not specified.
+
+Experimental Features:
+- Added experimental support for multiple connections per session
+
+Updated Features:
+- Updated kernel compatibility to 2.6.33
+- Updated RPM and DKMS build/install/maintenance handling
+- Updated kernel and usr ioctl functions to perform version checking
+  between kernel module and ietd
+
+Fixes:
+- Fixed bug in ietd text final text response
+- Fixed bug with reservation release during session deletion
+- Fixed compliance issues around ABORT TASK/ABORT TASK SET
+- Fixed fileio so it should work with all file system types
+- Fixed session and connection reinstatement to work per RFC
+- Fixed performance issue with CFQ scheduler
+- Fixed corner case with fileio_sync missing last page in a sync
+- Fixed bug in ietd where an interface without an address would
+  cause it to go into an infinite loop.
+- Fixed race condition between issuing ioctls during kernel cleanup
+- Fixed race condition between ietd shutdown and initiators which
+  would cause initiators to fail to reconnect properly
+- Fixed a race condition with data-out handling with multiple
+  connections per session
+- Fixed possible wthread lost wakeup condition when the number of
+  wthreads is less then the number of CPUs/cores.
+
+
+                          November 15th, 2009
+                             Version 1.4.19
+                             --------------
+
+The IET development team is pleased to announce the release of version
+1.4.19 of the iSCSI Enterprise Target.
+
+This release includes numerous bug fixes and compatibility improvements
+and it is highly recommended that all production servers be on this
+version for compatibility and stability reasons.
+
+We would like to thank all those that contributed for this release. As
+we are a small project we rely heavily on user contributions and we
+welcome all who wish to participate in improving IET.
+
+New since 1.4.18:
+
+- Added ability to limit number of sessions per target (MaxSessions)
+- Added NOP-In heartbeat for connections so dropped or abandoned
+  connections and their sessions close faster
+- Fixed a serious bug in initiators.allow code
+- Updated RPM .spec file with added SuSE compatibility and better
+  overall cross-platform friendliness.
+
+
+                           October 5th, 2009
+                             Version 1.4.18
+                             --------------
+
+The version numbering of IET has changed in this release from the 0.X.X
+series to the 1.X.X series. We did this because we felt that, since IET
+has been stable and in production use for many years now, it deserved a
+version number that better reflected that stability and maturity. We
+are preserving the minor/maintenance numbers though in order to help
+maintain some consistency between prior and future releases.
+
+New since 0.4.17:
+
+- Added support for recent kernel versions up to 2.6.31
+- Added support for even more targets via:
+	* multi PDU support during discovery
+	* improved procfs support
+	* global thread pool (module parameter)
+- Added support to list all target addresses during discovery, with
+  the ability to filter those addresses via targets.allow
+- Replaced initiators.deny with an implicit deny on a failure to find
+  a match in initiators.allow while preserving backwards compatiblity
+  with existing installations (iff initiators.deny doesn't exist)
+- Added ability to filter initiators by their IQNs as well as their
+  IP addresses, using basic regex pattern to specify IQNs
+- Moved the config files to /etc/iet/ while preserving backwards
+  compatiblity with existing installations (iff a valid config file
+  exists in the new location will it be used)
+- Added support for Unit Attention Conditions
+	* SCSI RESERVE/RELEASE now issues a UAC on reservation loss
+- Added support for DKMS and building RPM packages right from the
+  source archive (from either the source tar ball or subversion)
+
+Plus many many bug and compatibility fixes (see ChangeLog for details)
+
+
+                         Special thanks go to:
+                         ---------------------
+
+Shreyansh Jain, Lars Ellenberg, Ming Zhang, Francois Micaux, Cheng Renquan,
+Andreas Florath, sdrb, Xie Gang, Stefan Rubner, FUJITA Tomonori, Oliver R.,
+Matthew Wild, Kevin Ye, Min Tran, Luca Berra, Kun Huang, VMware, spren,
+Jagadish Kumar, Steven Umbehocker, Emmanuel Florac, Harshal Shete,
+Tim Westervoorde, Andrei Tanas, Chris Siebenmann, Manoj Iyer, Rob Caldwell
+Pasi Karkkainen, Eugen Rieck and to all list members who submitted bug
+reports, suggestions and comments.
+
+Without whose contributions IET would not have been possible.
+
+Arne Redlich & Ross Walker
+
