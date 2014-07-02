@@ -1,3 +1,5 @@
+.*.swp
+*.out
 /src/iscsitarget-1.4.20/usr/*.o
 /src/iscsitarget-1.4.20/kernel/*.o
 /src/iscsitarget-1.4.20/kernel/*.cmd

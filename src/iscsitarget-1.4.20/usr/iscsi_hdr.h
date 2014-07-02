@@ -12,10 +12,10 @@
 #define __packed __attribute__ ((packed))
 
 struct iscsi_hdr {
-	u8  opcode;			/* 0 */
+	u8  opcode;			/* 0 */  /* 操作码 */
 	u8  flags;
 	u8  spec1[2];
-	u8  ahslength;			/* 4 */
+	u8  ahslength;		/* 4 */
 	u8  datalength[3];
 	u16 lun[4];			/* 8 */
 	u32 itt;			/* 16 */
@@ -23,7 +23,7 @@ struct iscsi_hdr {
 	u32 sn;				/* 24 */
 	u32 exp_sn;			/* 28 */
 	u32 max_sn;			/* 32 */
-	u32 spec3[3];			/* 36 */
+	u32 spec3[3];		/* 36 */
 } __packed;				/* 48 */
 
 /* Opcode encoding bits */
@@ -31,6 +31,7 @@ struct iscsi_hdr {
 #define ISCSI_OP_IMMEDIATE		0x40
 #define ISCSI_OPCODE_MASK		0x3F
 
+/* 客户端发送的数据包的操作码 */
 /* Client to Server Message Opcode values */
 #define ISCSI_OP_NOP_OUT		0x00
 #define ISCSI_OP_SCSI_CMD		0x01
@@ -41,16 +42,17 @@ struct iscsi_hdr {
 #define ISCSI_OP_LOGOUT_CMD		0x06
 #define ISCSI_OP_SNACK_CMD		0x10
 
+/* 服务端响应的数据包的操作码 */
 /* Server to Client Message Opcode values */
 #define ISCSI_OP_NOP_IN 		0x20
 #define ISCSI_OP_SCSI_RSP		0x21
 #define ISCSI_OP_SCSI_TASK_MGT_RSP	0x22
 #define ISCSI_OP_LOGIN_RSP		0x23
 #define ISCSI_OP_TEXT_RSP		0x24
-#define ISCSI_OP_SCSI_DATA_RSP		0x25
+#define ISCSI_OP_SCSI_DATA_RSP	0x25
 #define ISCSI_OP_LOGOUT_RSP		0x26
 #define ISCSI_OP_R2T_RSP		0x31
-#define ISCSI_OP_ASYNC_EVENT		0x32
+#define ISCSI_OP_ASYNC_EVENT	0x32
 #define ISCSI_OP_REJECT_MSG		0x3f
 
 struct iscsi_ahs_hdr {
@@ -59,7 +61,7 @@ struct iscsi_ahs_hdr {
 } __packed;
 
 #define ISCSI_AHSTYPE_CDB		1
-#define ISCSI_AHSTYPE_RLENGTH		2
+#define ISCSI_AHSTYPE_RLENGTH	2
 
 union iscsi_sid {
 	struct {
@@ -216,15 +218,15 @@ struct iscsi_logout_rsp_hdr {
 #define ISCSI_REASON_NO_FULL_FEATURE_PHASE	0x01
 #define ISCSI_REASON_DATA_DIGEST_ERROR		0x02
 #define ISCSI_REASON_DATA_SNACK_REJECT		0x03
-#define ISCSI_REASON_PROTOCOL_ERROR		0x04
+#define ISCSI_REASON_PROTOCOL_ERROR		    0x04
 #define ISCSI_REASON_UNSUPPORTED_COMMAND	0x05
 #define ISCSI_REASON_IMMEDIATE_COMMAND_REJECT	0x06
 #define ISCSI_REASON_TASK_IN_PROGRESS		0x07
-#define ISCSI_REASON_INVALID_SNACK		0x08
+#define ISCSI_REASON_INVALID_SNACK		    0x08
 #define ISCSI_REASON_INVALID_PDU_FIELD		0x09
 #define ISCSI_REASON_BOOKMARK_REJECT		0x0a
 #define ISCSI_REASON_NEGOTIATION_RESET		0x0b
-#define ISCSI_REASON_WAITING_LOGOUT		0x0c
+#define ISCSI_REASON_WAITING_LOGOUT		    0x0c
 
 struct iscsi_reject_hdr {
 	u8  opcode;

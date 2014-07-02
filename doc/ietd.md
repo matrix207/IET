@@ -1,4 +1,4 @@
-ietd
+###ietd
 ------------------
 
     main
@@ -46,13 +46,19 @@ ietd
     #define LISTEN_MAX 8
     #define INCOMING_MAX 32
     enum {
-        POLL_LISTEN,                                /* 监听事件 8个 */
-        POLL_IPC = POLL_LISTEN + LISTEN_MAX,        /* IPC */
-        POLL_NL,                                    /* Netlink */
-        POLL_ISNS,                                  /* SNS protocol */
-        POLL_SCN_LISTEN,                            /* 监听SCN   */
-        POLL_SCN,                                   /* SCN    */
-        POLL_INCOMING,                              /* 处理数据    */
-        POLL_MAX = POLL_INCOMING + INCOMING_MAX,    /*     */
+        POLL_LISTEN,                             /* val:0  监听事件 8个 */
+        POLL_IPC = POLL_LISTEN + LISTEN_MAX,     /* val:8  IPC          */
+        POLL_NL,                                 /* val:9  Netlink      */
+        POLL_ISNS,                               /* val:10 SNS protocol */
+        POLL_SCN_LISTEN,                         /* val:11 监听SCN?     */
+        POLL_SCN,                                /* val:12 SCN?         */
+        POLL_INCOMING,                           /* val:13 处理数据     */
+        POLL_MAX = POLL_INCOMING + INCOMING_MAX, /* val:45 最多32路     */
     };
+
+------------------
+
+####question:
+
+1. getaddrinfo 用于监听绑定? 而且还可以用于获取域名的IP地址.?
 

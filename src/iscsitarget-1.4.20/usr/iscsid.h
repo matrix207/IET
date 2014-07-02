@@ -122,38 +122,38 @@ struct connection {
 #define IOSTATE_WRITE_AHS	4
 #define IOSTATE_WRITE_DATA	5
 
-#define STATE_FREE		0
+#define STATE_FREE		    0
 #define STATE_SECURITY		1
 #define STATE_SECURITY_AUTH	2
 #define STATE_SECURITY_DONE	3
 #define STATE_SECURITY_LOGIN	4
 #define STATE_SECURITY_FULL	5
-#define STATE_LOGIN		6
+#define STATE_LOGIN		    6
 #define STATE_LOGIN_FULL	7
-#define STATE_FULL		8
+#define STATE_FULL		    8
 #define STATE_KERNEL		9
-#define STATE_CLOSE		10
-#define STATE_EXIT		11
+#define STATE_CLOSE		    10
+#define STATE_EXIT		    11
 
 #define AUTH_STATE_START	0
 #define AUTH_STATE_CHALLENGE	1
 
 /* don't touch these */
-#define AUTH_DIR_INCOMING       0
-#define AUTH_DIR_OUTGOING       1
+#define AUTH_DIR_INCOMING   0
+#define AUTH_DIR_OUTGOING   1
 
 #define SESSION_NORMAL		0
 #define SESSION_DISCOVERY	1
 #define AUTH_UNKNOWN		-1
-#define AUTH_NONE		0
-#define AUTH_CHAP		1
+#define AUTH_NONE		    0
+#define AUTH_CHAP		    1
 #define DIGEST_UNKNOWN		-1
 
-#define BHS_SIZE		48
+#define BHS_SIZE		    48
 
 #define INCOMING_BUFSIZE	8192
 
-#define LISTEN_MAX		8
+#define LISTEN_MAX		    8
 #define INCOMING_MAX		32
 
 enum {

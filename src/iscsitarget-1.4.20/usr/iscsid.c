@@ -59,10 +59,12 @@ char *text_key_find(struct connection *conn, char *searchKey)
 	int keylen, datasize;
 
 	keylen = strlen(searchKey);
+    /* 获取PDU数据段指针 */
 	data = conn->req.data;
 	datasize = conn->req.datasize;
 
 	while (1) {
+        /* 获取字段名称,位于等号前 */
 		for (key = data; datasize > 0 && *data != '='; data++, datasize--)
 			;
 		if (!datasize)
@@ -70,6 +72,7 @@ char *text_key_find(struct connection *conn, char *searchKey)
 		data++;
 		datasize--;
 
+        /* 获取字段值,在等号后面,且在0值前面 */
 		for (value = data; datasize > 0 && *data != 0; data++, datasize--)
 			;
 		if (!datasize)
@@ -77,6 +80,7 @@ char *text_key_find(struct connection *conn, char *searchKey)
 		data++;
 		datasize--;
 
+        /* 判断该值是否为要查找的子段 */
 		if (keylen == value - key - 1
 		     && !strncmp(key, searchKey, keylen))
 			return value;
@@ -860,7 +864,7 @@ int cmnd_execute(struct connection *conn)
 	struct iscsi_login_rsp_hdr *login_rsp;
 
 	switch (conn->req.bhs.opcode & ISCSI_OPCODE_MASK) {
-	case ISCSI_OP_LOGIN_CMD:
+	case ISCSI_OP_LOGIN_CMD: /* 0x03 登陆 */
 		if (conn->state == STATE_FULL) {
 			cmnd_reject(conn, ISCSI_REASON_PROTOCOL_ERROR);
 			break;
@@ -870,13 +874,13 @@ int cmnd_execute(struct connection *conn)
 		if (login_rsp->status_class && login_rsp->status_class != ISCSI_STATUS_REDIRECT)
 			conn_free_rsp_buf_list(conn);
 		break;
-	case ISCSI_OP_TEXT_CMD:
+	case ISCSI_OP_TEXT_CMD:  /* 0x04 文本 */
 		if (conn->state != STATE_FULL)
 			cmnd_reject(conn, ISCSI_REASON_PROTOCOL_ERROR);
 		else
 			cmnd_exec_text(conn);
 		break;
-	case ISCSI_OP_LOGOUT_CMD:
+	case ISCSI_OP_LOGOUT_CMD: /* 0x06 退出 */
 		if (conn->state != STATE_FULL)
 			cmnd_reject(conn, ISCSI_REASON_PROTOCOL_ERROR);
 		else

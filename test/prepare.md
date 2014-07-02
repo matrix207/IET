@@ -36,6 +36,8 @@
 
 安装 `yum install iscsi-initiator-utils`
 
+    [root@localhost dennis]# iscsiadm -m discovery -t st -p 172.16.110.10
+    172.16.110.10:3260,1 iqn.2014-06.com.matrix:storage.515.disk
     [root@localhost dennis]# fdisk -l
     Disk /dev/sda: 149 GiB, 160000000000 bytes, 312500000 sectors
     Units: sectors of 1 * 512 = 512 bytes

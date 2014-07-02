@@ -113,9 +113,12 @@ static void create_listen_socket(struct pollfd *array)
 	snprintf(servname, sizeof(servname), "%d", server_port);
 
 	memset(&hints, 0, sizeof(hints));
+    /* 流 */
 	hints.ai_socktype = SOCK_STREAM;
+    /* bind */
 	hints.ai_flags = AI_PASSIVE;
 
+    /* 获取地址信息 ? */
 	if (getaddrinfo(server_address, servname, &hints, &res0)) {
 		log_error("unable to get address info (%s)!",
 			(errno == EAI_SYSTEM) ? strerror(errno) :
@@ -160,6 +163,7 @@ static void create_listen_socket(struct pollfd *array)
 		set_non_blocking(sock);
 
 		array[i].fd = sock;
+        /* 只关心有数据可读事件 */
 		array[i].events = POLLIN;
 	}
 
@@ -183,6 +187,7 @@ static void accept_connection(int listen)
 		return;
 	}
 
+    /* 获取空闲位置，用来保存连接信息 */
 	for (i = 0; i < INCOMING_MAX; i++) {
 		if (!incoming[i])
 			break;
@@ -192,17 +197,22 @@ static void accept_connection(int listen)
 		exit(1);
 	}
 
+    /* 申请内存 */
 	if (!(conn = conn_alloc())) {
 		log_error("fail to allocate %s", "conn\n");
 		exit(1);
 	}
 	conn->fd = fd;
+    /* 保存连接信息 */
 	incoming[i] = conn;
+    /* 初始化读连接 */
 	conn_read_pdu(conn);
 
 	set_non_blocking(fd);
+    /* poll数组赋值 */
 	pollfd = &poll_array[POLL_INCOMING + i];
 	pollfd->fd = fd;
+    /* 表示有数据可读 */
 	pollfd->events = POLLIN;
 	pollfd->revents = 0;
 
@@ -230,13 +240,16 @@ void event_loop(int timeout)
 	struct connection *conn;
 	struct pollfd *pollfd;
 
+    /* 创建监听socket */ 
 	create_listen_socket(poll_array + POLL_LISTEN);
 
+    /* 初始化 IPC和netlink poll 事件信息 */
 	poll_array[POLL_IPC].fd = ipc_fd;
 	poll_array[POLL_IPC].events = POLLIN;
 	poll_array[POLL_NL].fd = nl_fd;
 	poll_array[POLL_NL].events = POLLIN;
 
+    /* 初始化 */
 	for (i = 0; i < INCOMING_MAX; i++) {
 		poll_array[POLL_INCOMING + i].fd = -1;
 		poll_array[POLL_INCOMING + i].events = 0;
@@ -244,8 +257,16 @@ void event_loop(int timeout)
 	}
 
 	while (1) {
+        /* poll事件查询,
+         * POLLIN:    有数据从3260端口进来 
+         * POLL_NL:   有数据从netlink进来
+         * POLL_IPC:  有数据从AF_LOCAL进来
+         * POLL_ISNS:
+         * POLL_SCN:
+         */
 		res = poll(poll_array, POLL_MAX, timeout);
 		if (res == 0) {
+            /* 超时处理 */
 			isns_handle(1, &timeout);
 			continue;
 		} else if (res < 0) {
@@ -256,27 +277,35 @@ void event_loop(int timeout)
 			continue;
 		}
 
+        /* 在create_listen_socket中设置了只关心有数据可读事件
+         * 所以这里要过滤出数据可读事件 */
 		for (i = 0; i < LISTEN_MAX; i++) {
 			if (poll_array[POLL_LISTEN + i].revents
 			    && incoming_cnt < INCOMING_MAX)
 				accept_connection(poll_array[POLL_LISTEN + i].fd);
 		}
 
+        /* 处理事件 netlink */
 		if (poll_array[POLL_NL].revents)
 			handle_iscsi_events(nl_fd);
 
+        /* 处理事件 IPC */
 		if (poll_array[POLL_IPC].revents)
 			ietadm_request_handle(ipc_fd);
 
+        /* 处理事件 ISNS */
 		if (poll_array[POLL_ISNS].revents)
 			isns_handle(0, &timeout);
 
+        /* 处理事件 SCN监听, 用于接受 SCN 连接 */
 		if (poll_array[POLL_SCN_LISTEN].revents)
 			isns_scn_handle(1);
 
+        /* 处理事件 SCN, 处理数据 */
 		if (poll_array[POLL_SCN].revents)
 			isns_scn_handle(0);
 
+        /* 循环处理所有连接数据 */
 		for (i = 0; i < INCOMING_MAX; i++) {
 			conn = incoming[i];
 			pollfd = &poll_array[POLL_INCOMING + i];
@@ -285,10 +314,12 @@ void event_loop(int timeout)
 
 			pollfd->revents = 0;
 
+            /* 判断IO类型,连接初始阶段为IOSTATE_READ_BHS */
 			switch (conn->iostate) {
 			case IOSTATE_READ_BHS:
 			case IOSTATE_READ_AHS_DATA:
 			read_again:
+                /* 读取数据 */
 				res = read(pollfd->fd, conn->buffer, conn->rwsize);
 				if (res <= 0) {
 					if (res == 0 || (errno != EINTR && errno != EAGAIN))
@@ -297,12 +328,14 @@ void event_loop(int timeout)
 						goto read_again;
 					break;
 				}
+                /* rwsize初始值为48,BHS基本头段的固定大小 */
 				conn->rwsize -= res;
 				conn->buffer += res;
 				if (conn->rwsize)
 					break;
 
 				switch (conn->iostate) {
+                /* */
 				case IOSTATE_READ_BHS:
 					conn->iostate = IOSTATE_READ_AHS_DATA;
 					conn->req.ahssize = conn->req.bhs.ahslength * 4;
@@ -310,6 +343,7 @@ void event_loop(int timeout)
 							      (conn->req.bhs.datalength[1] << 8) +
 							      conn->req.bhs.datalength[2]);
 					conn->rwsize = (conn->req.ahssize + conn->req.datasize + 3) & -4;
+                    /* 数据报大小不能超过8k */
 					if (conn->rwsize > INCOMING_BUFSIZE) {
 						log_warning("Recv PDU with "
 							    "invalid size %d "
@@ -334,11 +368,15 @@ void event_loop(int timeout)
 						goto read_again;
 					}
 
+                /* 读取附件段数据 */
 				case IOSTATE_READ_AHS_DATA:
+                    /* 读取附件段数据 */
 					conn_write_pdu(conn);
 					pollfd->events = POLLOUT;
 
+                    /* 打印PDU */
 					log_pdu(2, &conn->req);
+                    /* 打印PDU */
 					if (!cmnd_execute(conn))
 						conn->state = STATE_CLOSE;
 					break;
@@ -394,6 +432,7 @@ void event_loop(int timeout)
 
 					switch (conn->state) {
 					case STATE_KERNEL:
+                        /* 连接转入内核 */
 						conn_take_fd(conn, pollfd->fd);
 						conn->state = STATE_CLOSE;
 						break;
@@ -431,6 +470,7 @@ void event_loop(int timeout)
 	}
 }
 
+/* 入口函数 */
 int main(int argc, char **argv)
 {
 	int ch, longindex, timeout = -1;
@@ -480,28 +520,34 @@ int main(int argc, char **argv)
 		}
 	}
 
+    /* 日志初始化 */
 	log_init();
 
+    /* 打开netlink网络连接 */
 	if ((nl_fd = nl_open()) < 0) {
 		log_error("unable to open netlink fd: %m");
 		exit(-1);
 	};
 
+    /* 打开设备/dev/ietctl, 用于跟内核态的iscsi通信 */
 	if ((ctrl_fd = ki->ctldev_open()) < 0) {
 		log_error("unable to open ctldev fd: %m");
 		exit(-1);
 	}
 
+    /* 监听本地网络AF_LOCAL,用于处理来自ietadm的请求 */
 	if ((ipc_fd = ietadm_request_listen()) < 0) {
 		log_error("unable to open ipc fd: %m");
 		exit(-1);
 	}
 
+    /* 检查版本信息，如果用户态跟内核态版本不一致，直接退出 */
 	if (!check_version()) {
 		log_error("kernel module version mismatch!");
 		exit(-1);
 	}
 
+    /* daemon 方式运行 */
 	if (log_daemon) {
 		char buf[64];
 		pid_t pid;
@@ -546,6 +592,7 @@ int main(int argc, char **argv)
 		setsid();
 	}
 
+    /* 读取配置文件初始化/etc/iet/ietd.conf和/etc/ietd.conf */
 	cops->init(config, &isns, &isns_ac);
 	if (isns)
 		timeout = isns_init(isns, isns_ac);
@@ -556,6 +603,7 @@ int main(int argc, char **argv)
 	if (uid && setuid(uid) < 0)
 		log_error("unable to setuid: %m");
 
+    /* 事件循环 */
 	event_loop(timeout);
 
 	return 0;
