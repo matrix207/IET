@@ -709,6 +709,7 @@ static int sys_handle(int op, u32 set, char *params)
 	return err;
 }
 
+/* ietadm 入口函数 */
 int main(int argc, char **argv)
 {
 	int ch, longindex;

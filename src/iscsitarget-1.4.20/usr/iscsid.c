@@ -59,12 +59,12 @@ char *text_key_find(struct connection *conn, char *searchKey)
 	int keylen, datasize;
 
 	keylen = strlen(searchKey);
-    /* 获取PDU数据段指针 */
+	/* 获取PDU数据段指针 */
 	data = conn->req.data;
 	datasize = conn->req.datasize;
 
 	while (1) {
-        /* 获取字段名称,位于等号前 */
+		/* 获取字段名称,位于等号前 */
 		for (key = data; datasize > 0 && *data != '='; data++, datasize--)
 			;
 		if (!datasize)
@@ -72,7 +72,7 @@ char *text_key_find(struct connection *conn, char *searchKey)
 		data++;
 		datasize--;
 
-        /* 获取字段值,在等号后面,且在0值前面 */
+		/* 获取字段值,在等号后面,且在0值前面 */
 		for (value = data; datasize > 0 && *data != 0; data++, datasize--)
 			;
 		if (!datasize)
@@ -80,7 +80,7 @@ char *text_key_find(struct connection *conn, char *searchKey)
 		data++;
 		datasize--;
 
-        /* 判断该值是否为要查找的子段 */
+		/* 判断该值是否为要查找的子段 */
 		if (keylen == value - key - 1
 		     && !strncmp(key, searchKey, keylen))
 			return value;
@@ -114,6 +114,7 @@ static char *next_key(char **data, int *datasize, char **value)
 	return key;
 }
 
+/* 申请内存 */
 static struct buf_segment * conn_alloc_buf_segment(struct connection *conn,
 						   size_t sz)
 {
@@ -145,11 +146,13 @@ void text_key_add(struct connection *conn, char *key, char *value)
 		conn->session_param[key_max_xmit_data_length].val :
 		INCOMING_BUFSIZE;
 
+	/* 获取结构体struct buf_segment的指针 */
 	seg = list_empty(&conn->rsp_buf_list) ? NULL :
 		list_entry(conn->rsp_buf_list.q_back, struct buf_segment,
 			   entry);
 
 	while (len) {
+		/* 申请内存 */
 		if (!seg || seg->len == data_sz) {
 			seg = conn_alloc_buf_segment(conn, data_sz);
 			if (!seg) {
@@ -656,6 +659,7 @@ static void cmnd_exec_login(struct connection *conn)
 
 		break;
 	case ISCSI_FLG_CSG_LOGIN:
+		/* 操作协商 */
 		log_debug(1, "Login request (operational negotiation): %d", conn->state);
 		rsp->flags = ISCSI_FLG_CSG_LOGIN;
 
@@ -663,6 +667,7 @@ static void cmnd_exec_login(struct connection *conn)
 		case STATE_FREE:
 			conn->state = STATE_LOGIN;
 
+			/* 登陆 */
 			login_start(conn);
 			if (!account_empty(conn->tid, AUTH_DIR_INCOMING))
 				goto auth_err;
@@ -858,6 +863,7 @@ static void cmnd_exec_logout(struct connection *conn)
 	rsp->max_cmd_sn = cpu_to_be32(conn->max_cmd_sn);
 }
 
+/* 命令执行 */
 int cmnd_execute(struct connection *conn)
 {
 	struct buf_segment *seg;

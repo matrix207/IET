@@ -19,8 +19,10 @@
 
 #define CTL_DEVICE	"/dev/ietctl"
 
+/* 设备/dev/ietctl的文件描述符合, 定义在ietd.c中 */
 extern int ctrl_fd;
 
+/* ioctl对设备/dev/ietctl进行模块信息获取(GET_MODULE_INFO)操作, */
 static int ctrdev_open(void)
 {
 	FILE *f;
@@ -29,6 +31,7 @@ static int ctrdev_open(void)
 	int devn;
 	int ctlfd;
 
+	/* 检查有没有注册内核模块 */
 	if (!(f = fopen("/proc/devices", "r"))) {
 		log_error("cannot open control path to the driver: %m");
 		return -1;
@@ -49,18 +52,21 @@ static int ctrdev_open(void)
 	}
 
 	fclose(f);
+	/* 如果没有注册内核模块，devn设备号为0 */
 	if (!devn) {
 		log_error("cannot find iscsictl in /proc/devices - "
 		     "make sure the kernel module is loaded");
 		return -1;
 	}
 
+	/* 删除/dev/ietctl */
 	unlink(CTL_DEVICE);
 	if (mknod(CTL_DEVICE, (S_IFCHR | 0600), (devn << 8))) {
 		log_error("cannot create %s: %m", CTL_DEVICE);
 		return -1;
 	}
 
+	/* 打开/dev/ietctl */
 	ctlfd = open(CTL_DEVICE, O_RDWR);
 	if (ctlfd < 0) {
 		log_error("cannot open %s: %m", CTL_DEVICE);
@@ -70,6 +76,7 @@ static int ctrdev_open(void)
 	return ctlfd;
 }
 
+/* ioctl对设备/dev/ietctl进行模块信息获取(GET_MODULE_INFO)操作, */
 static int iet_module_info(struct module_info *info)
 {
 	int err;
@@ -81,6 +88,7 @@ static int iet_module_info(struct module_info *info)
 	return (err < 0) ? -errno : 0;
 }
 
+/* ioctl对设备/dev/ietctl进行TARGET创建(ADD_TARGET)操作, */
 static int iscsi_target_create(u32 *tid, char *name)
 {
 	struct target_info info;
@@ -100,6 +108,7 @@ static int iscsi_target_create(u32 *tid, char *name)
 	return (err < 0) ? -errno : 0;
 }
 
+/* ioctl对设备/dev/ietctl进行TARGET删除(DEL_TARGET)操作, */
 static int iscsi_target_destroy(u32 tid)
 {
 	struct target_info info;
@@ -115,6 +124,7 @@ static int iscsi_target_destroy(u32 tid)
 	return (err < 0) ? -errno : 0;
 }
 
+/* ioctl对设备/dev/ietctl进行LUN创建(ADD_VOLUME)操作, */
 static int iscsi_lunit_create(u32 tid, u32 lun, char *args)
 {
 	struct volume_info info;
@@ -141,6 +151,7 @@ static int iscsi_lunit_create(u32 tid, u32 lun, char *args)
 	return (err < 0) ? -errno : 0;
 }
 
+/* ioctl对设备/dev/ietctl进行LUN删除(DEL_VOLUME)操作, */
 static int iscsi_lunit_destroy(u32 tid, u32 lun)
 {
 	struct volume_info info;
@@ -157,6 +168,7 @@ static int iscsi_lunit_destroy(u32 tid, u32 lun)
 	return (err < 0) ? -errno : 0;
 }
 
+/* ioctl对设备/dev/ietctl进行连接删除(DEL_CONN)操作, */
 static int iscsi_conn_destroy(u32 tid, u64 sid, u32 cid)
 {
 	struct conn_info info;
@@ -173,6 +185,7 @@ static int iscsi_conn_destroy(u32 tid, u64 sid, u32 cid)
 	return (err < 0) ? -errno : 0;
 }
 
+/* ioctl对设备/dev/ietctl进行参数获取(ISCSI_PARAM_GET)操作, */
 static int iscsi_param_get(u32 tid, u64 sid, int type, struct iscsi_param *param)
 {
 	struct iscsi_param_info info;
@@ -198,6 +211,7 @@ static int iscsi_param_get(u32 tid, u64 sid, int type, struct iscsi_param *param
 	return (err < 0) ? -errno : 0;
 }
 
+/* ioctl对设备/dev/ietctl进行参数设置(ISCSI_PARAM_SET)操作, */
 static int iscsi_param_set(u32 tid, u64 sid, int type, u32 partial, struct iscsi_param *param)
 {
 	struct iscsi_param_info info;
@@ -223,6 +237,7 @@ static int iscsi_param_set(u32 tid, u64 sid, int type, u32 partial, struct iscsi
 	return (err < 0) ? -errno : 0;
 }
 
+/* ioctl对设备/dev/ietctl进行创建会话(ADD_SESSION)操作, */
 static int iscsi_session_create(u32 tid, u64 sid, u32 exp_cmd_sn, u32 max_cmd_sn, char *name)
 {
 	struct session_info info;
@@ -243,6 +258,7 @@ static int iscsi_session_create(u32 tid, u64 sid, u32 exp_cmd_sn, u32 max_cmd_sn
 	return (err < 0) ? -errno : 0;
 }
 
+/* ioctl对设备/dev/ietctl进行删除会话(DEL_SESSION)操作, */
 static int iscsi_session_destroy(u32 tid, u64 sid)
 {
 	struct session_info info;
@@ -260,6 +276,7 @@ static int iscsi_session_destroy(u32 tid, u64 sid)
 	return (err < 0) ? -errno : 0;
 }
 
+/* ioctl对设备/dev/ietctl进行创建连接(ADD_CONN)操作, */
 static int iscsi_conn_create(u32 tid, u64 sid, u32 cid, u32 stat_sn, u32 exp_stat_sn,
 			     int fd, u32 hdigest, u32 ddigest)
 {
@@ -295,6 +312,7 @@ static int iscsi_session_info(struct session_info *info)
 	return (err < 0) ? -errno : 0;
 }
 
+/* 定义内核操作接口函数 */
 struct iscsi_kernel_interface ioctl_ki = {
 	.ctldev_open = ctrdev_open,
 	.module_info = iet_module_info,

@@ -38,6 +38,7 @@ void conn_free(struct connection *conn)
 	free(conn);
 }
 
+/* 连接转入内核 */
 void conn_take_fd(struct connection *conn, int fd)
 {
 	int err;
