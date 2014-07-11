@@ -192,6 +192,12 @@
 
 ###Wireshark
 
-Filter:
+Run wireshark with not root, run command:
+
+	su -c 'usermod -a -G wireshark dennis'
+
+then logout and login.
+
+Filter packages with iscsi and specify ip:
 
 	iscsi and ip.addr==172.16.110.10

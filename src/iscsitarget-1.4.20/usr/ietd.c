@@ -363,6 +363,7 @@ void event_loop(int timeout)
 					conn->req.datasize = ((conn->req.bhs.datalength[0] << 16) +
 							      (conn->req.bhs.datalength[1] << 8) +
 							      conn->req.bhs.datalength[2]);
+					/* ??? */
 					conn->rwsize = (conn->req.ahssize + conn->req.datasize + 3) & -4;
 					/* 数据报大小不能超过8k */
 					if (conn->rwsize > INCOMING_BUFSIZE) {
