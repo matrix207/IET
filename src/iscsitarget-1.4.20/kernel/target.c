@@ -93,14 +93,17 @@ struct iscsi_target *target_lookup_by_id(u32 id)
 	return target;
 }
 
+/* target 线程 */
 static int target_thread_start(struct iscsi_target *target)
 {
 	int err;
 
+	/* 启动网络线程 */
 	if ((err = nthread_start(target)) < 0)
 		return err;
 
 	if (!worker_thread_pool) {
+		/* 启动工作线程 */
 		err = wthread_start(target->wthread_info,
 				    target->trgt_param.wthreads, target->tid);
 		if (err)
@@ -118,6 +121,7 @@ static void target_thread_stop(struct iscsi_target *target)
 	nthread_stop(target);
 }
 
+/* 创建target */
 static int iscsi_target_create(struct target_info *info, u32 tid)
 {
 	int err = -EINVAL, len;
@@ -173,6 +177,7 @@ static int iscsi_target_create(struct target_info *info, u32 tid)
 		target->wthread_info = worker_thread_pool;
 
 
+	/* 启动target线程 */
 	if ((err = target_thread_start(target)) < 0) {
 		target_thread_stop(target);
 		goto out;
@@ -190,6 +195,7 @@ out:
 	return err;
 }
 
+/* 增加一个target */
 int target_add(struct target_info *info)
 {
 	u32 tid = info->tid;
@@ -219,6 +225,7 @@ int target_add(struct target_info *info)
 		tid = next_target_id;
 	}
 
+	/* 创建target */
 	err = iscsi_target_create(info, tid);
 	if (!err)
 		nr_targets++;

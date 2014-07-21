@@ -1,12 +1,14 @@
 #ifndef _IET_U_H
 #define _IET_U_H
 
+/* 版本号设置 */
 #define IET_VERSION_STRING	"1.4.20"
 
 /* The maximum length of 223 bytes in the RFC. */
 #define ISCSI_NAME_LEN	256
 #define ISCSI_ARGS_LEN	2048
 
+/* iscsi监听端口 */
 #define ISCSI_LISTEN_PORT	3260
 
 #define SCSI_ID_LEN	16
@@ -16,15 +18,18 @@
 #define aligned_u64 unsigned long long __attribute__((aligned(8)))
 #endif
 
+/* 模块版本信息 */
 struct module_info {
 	char version[128];
 };
 
+/* target信息 */
 struct target_info {
 	u32 tid;
 	char name[ISCSI_NAME_LEN];
 };
 
+/* volume卷信息 */
 struct volume_info {
 	u32 tid;
 	u32 lun;
@@ -32,10 +37,14 @@ struct volume_info {
 	u32 args_len;
 };
 
+/* 会话信息 */
 struct session_info {
+	/* target id */
 	u32 tid;
 
+	/* session id */
 	aligned_u64 sid;
+	/* initiator端名称 */
 	char initiator_name[ISCSI_NAME_LEN];
 	u32 exp_cmd_sn;
 	u32 max_cmd_sn;
@@ -45,10 +54,14 @@ struct session_info {
 #define DIGEST_NONE		(1 << 0)
 #define DIGEST_CRC32C           (1 << 1)
 
+/* 连接信息 */
 struct conn_info {
+	/* target id */
 	u32 tid;
+	/* session id */
 	aligned_u64 sid;
 
+	/* connect id */
 	u32 cid;
 	u32 stat_sn;
 	u32 exp_stat_sn;
@@ -57,6 +70,7 @@ struct conn_info {
 	int fd;
 };
 
+/* 会话key值 */
 enum {
 	key_initial_r2t,
 	key_immediate_data,
@@ -77,31 +91,39 @@ enum {
 	key_ifmarker,
 	key_ofmarkint,
 	key_ifmarkint,
-	session_key_last,
+	session_key_last, /* 用于声明session数组大小 */
 };
 
+/* target key值 */
 enum {
 	key_wthreads,
 	key_target_type,
 	key_queued_cmnds,
 	key_nop_interval,
 	key_nop_timeout,
-	target_key_last,
+	target_key_last, /* 用于声明target数组大小 */
 };
 
+/* 参数类型 */
 enum {
 	key_session,
 	key_target,
 };
 
+/* 参数信息 */
 struct iscsi_param_info {
+	/* target id */
 	u32 tid;
+	/* session id */
 	aligned_u64 sid;
 
+	/* 参数类型 */
 	u32 param_type;
 	u32 partial;
 
+	/* 会话参数 */
 	u32 session_param[session_key_last];
+	/* target参数 */
 	u32 target_param[target_key_last];
 };
 
@@ -109,6 +131,7 @@ enum iet_event_state {
 	E_CONN_CLOSE,
 };
 
+/* ietd信息 */
 struct iet_event {
 	u32 tid;
 	aligned_u64 sid;

@@ -510,6 +510,7 @@ static int disk_check_reservation(struct iscsi_cmnd *cmnd)
 	return 0;
 }
 
+/* 磁盘命令操作 */
 static int disk_execute_cmnd(struct iscsi_cmnd *cmnd)
 {
 	struct iscsi_scsi_cmd_hdr *req = cmnd_hdr(cmnd);
@@ -522,6 +523,7 @@ static int disk_execute_cmnd(struct iscsi_cmnd *cmnd)
 	if (disk_check_reservation(cmnd))
 		return 0;
 
+	/* 需要解释这些请求的意义? */
 	switch (req->scb[0]) {
 	case INQUIRY:
 		send_data_rsp(cmnd, build_inquiry_response);

@@ -610,11 +610,13 @@ static void conn_start_nop_timer(struct iscsi_conn *conn)
 		  jiffies + HZ * target->trgt_param.nop_interval);
 }
 
+/* IO 处理 */
 static void process_io(struct iscsi_conn *conn)
 {
 	struct iscsi_target *target = conn->session->target;
 	int res, wakeup = 0;
 
+	/* 接收 */
 	res = recv(conn);
 
 	if (is_data_available(conn) > 0 || res > 0) {
@@ -630,6 +632,7 @@ static void process_io(struct iscsi_conn *conn)
 	if (test_bit(CONN_WSPACE_WAIT, &conn->state))
 		goto out;
 
+	/* 发送 */
 	res = send(conn);
 
 	if (!list_empty(&conn->write_list) || conn->write_cmnd) {
@@ -639,9 +642,11 @@ static void process_io(struct iscsi_conn *conn)
 
 out:
 	if (wakeup)
+		/* 唤醒target */
 		nthread_wakeup(target);
 	else if (test_and_clear_bit(CONN_NEED_NOP_IN, &conn->state)) {
 		send_nop_in(conn);
+		/* 唤醒target */
 		nthread_wakeup(target);
 	} else
 		conn_start_nop_timer(conn);
@@ -698,6 +703,7 @@ static void close_conn(struct iscsi_conn *conn)
 	}
 }
 
+/* 网络线程函数 */
 static int istd(void *arg)
 {
 	struct iscsi_target *target = arg;
@@ -711,6 +717,7 @@ static int istd(void *arg)
 
 		if (!test_bit(D_DATA_READY, &info->flags)) {
 			spin_unlock_bh(&info->nthread_lock);
+			/* 调度进程 */
 			schedule();
 			spin_lock_bh(&info->nthread_lock);
 		}
@@ -721,6 +728,7 @@ static int istd(void *arg)
 		target_lock(target, 0);
 		list_for_each_entry_safe(conn, tmp, &info->active_conns, poll_list) {
 			if (test_bit(CONN_ACTIVE, &conn->state))
+				/* 如果连接为活动状态,处理该连接的IO */
 				process_io(conn);
 			else
 				close_conn(conn);
@@ -750,6 +758,7 @@ int nthread_init(struct iscsi_target *target)
 	return 0;
 }
 
+/* 启动网络线程 */
 int nthread_start(struct iscsi_target *target)
 {
 	int err = 0;
@@ -761,6 +770,7 @@ int nthread_start(struct iscsi_target *target)
 		return -EALREADY;
 	}
 
+	/* 启动线程函数istd */
 	task = kthread_run(istd, target, "istd%d", target->tid);
 
 	if (IS_ERR(task))

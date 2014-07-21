@@ -22,6 +22,7 @@
 
 #define IET_SENSE_BUF_SIZE      18
 
+/* 会话参数 */
 struct iscsi_sess_param {
 	int initial_r2t;
 	int immediate_data;
@@ -44,6 +45,7 @@ struct iscsi_sess_param {
 	int ifmarkint;
 };
 
+/* target参数 */
 struct iscsi_trgt_param {
 	int wthreads;
 	int target_type;
@@ -52,6 +54,7 @@ struct iscsi_trgt_param {
 	int nop_timeout;
 };
 
+/* target i/o */
 struct tio {
 	u32 pg_cnt;
 
@@ -64,11 +67,14 @@ struct tio {
 	atomic_t count;
 };
 
+/* 网络线程 */
 struct network_thread_info {
+	/* 进程描述符 */
 	struct task_struct *task;
 	unsigned long flags;
 	struct list_head active_conns;
 
+	/* 自旋锁 */
 	spinlock_t nthread_lock;
 
 	void (*old_state_change)(struct sock *);
@@ -78,22 +84,31 @@ struct network_thread_info {
 
 struct worker_thread_info;
 
+/* 工作线程 */
 struct worker_thread {
+	/* 进程描述符 */
 	struct task_struct *w_task;
 	struct list_head w_list;
+	/* 工作线程信息 */
 	struct worker_thread_info *w_info;
 };
 
+/* 工作线程信息 */
 struct worker_thread_info {
+	/* 自旋锁 */
 	spinlock_t wthread_lock;
 
+	/* 运行的线程数 */
 	u32 nr_running_wthreads;
 
+	/* 工作线程链表 */
 	struct list_head wthread_list;
+	/* 工作线程队列 */
 	struct list_head work_queue;
 
 	wait_queue_head_t wthread_sleep;
 
+	/* I/O调度 */
 	struct io_context *wthread_ioc;
 };
 
@@ -109,43 +124,57 @@ enum iscsi_device_state {
 	IDEV_DEL,
 };
 
+/* target */
 struct iscsi_target {
 	struct list_head t_list;
 	u32 tid;
 
 	char name[ISCSI_NAME_LEN];
 
+	/* 会话参数 */
 	struct iscsi_sess_param sess_param;
+	/* target参数 */
 	struct iscsi_trgt_param trgt_param;
 
 	atomic_t nr_volumes;
+	/* 卷链表头 */
 	struct list_head volumes;
+	/* 会话链表头 */
 	struct list_head session_list;
 
+	/* 会话自旋锁 */
 	/* Prevents races between add/del session and adding UAs */
 	spinlock_t session_list_lock;
 
+	/* 网络线程 */
 	struct network_thread_info nthread_info;
 	/* Points either to own list or global pool */
+	/* 工作线程信息 */
 	struct worker_thread_info * wthread_info;
 
+	/* 信号量 */
 	struct semaphore target_sem;
 };
 
+/* iscsi队列 */
 struct iscsi_queue {
+	/* 自旋锁 */
 	spinlock_t queue_lock;
 	struct iscsi_cmnd *ordered_cmnd;
 	struct list_head wait_list;
 	int active_cnt;
 };
 
+/* iet 卷 */
 struct iet_volume {
 	u32 lun;
 
 	enum iscsi_device_state l_state;
 	atomic_t l_count;
 
+	/* target指针 */
 	struct iscsi_target *target;
+	/* 链表头 */
 	struct list_head list;
 
 	struct iscsi_queue queue;
@@ -157,10 +186,12 @@ struct iet_volume {
 	u64 blk_cnt;
 
 	u64 reserve_sid;
+	/* 自旋锁 */
 	spinlock_t reserve_lock;
 
 	unsigned long flags;
 
+	/* io类型 */
 	struct iotype *iotype;
 	void *private;
 };
@@ -200,6 +231,7 @@ struct iscsi_session {
 	struct iscsi_sess_param param;
 	u32 max_queued_cmnds;
 
+	/* connect 链表 */
 	struct list_head conn_list;
 
 	struct list_head pending_list;
@@ -224,6 +256,7 @@ enum connection_state_bit {
 
 struct iscsi_conn {
 	struct list_head list;			/* list entry in session list */
+	/* 所属会话 */
 	struct iscsi_session *session;		/* owning session */
 
 	u16 cid;
@@ -266,6 +299,7 @@ struct iscsi_conn {
 	struct scatterlist hash_sg[ISCSI_CONN_IOV_MAX];
 };
 
+/* PDU 协议数据单元 */
 struct iscsi_pdu {
 	struct iscsi_hdr bhs;
 	void *ahs;
@@ -275,18 +309,23 @@ struct iscsi_pdu {
 
 typedef void (iet_show_info_t)(struct seq_file *seq, struct iscsi_target *target);
 
+/* iscsi命令 */
 struct iscsi_cmnd {
 	struct list_head list;
 	struct list_head conn_list;
 	unsigned long flags;
+	/* 链接 */
 	struct iscsi_conn *conn;
+	/* 卷 */
 	struct iet_volume *lun;
 
+	/* pdu */
 	struct iscsi_pdu pdu;
 	struct list_head pdu_list;
 
 	struct list_head hash_list;
 
+	/* target io */
 	struct tio *tio;
 
 	u8 status;
@@ -302,6 +341,7 @@ struct iscsi_cmnd {
 	u32 hdigest;
 	u32 ddigest;
 
+	/* iscsi 请求 */
 	struct iscsi_cmnd *req;
 
 	unsigned char sense_buf[IET_SENSE_BUF_SIZE];

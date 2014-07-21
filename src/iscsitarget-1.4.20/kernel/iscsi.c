@@ -49,6 +49,7 @@ static u32 cmnd_read_size(struct iscsi_cmnd *cmnd)
 	return 0;
 }
 
+/* iscsi命令加入到工作线程队列 */
 static void iscsi_device_queue_cmnd(struct iscsi_cmnd *cmnd)
 {
 	set_cmnd_waitio(cmnd);
@@ -837,6 +838,7 @@ static void send_r2t(struct iscsi_cmnd *req)
 	iscsi_cmnds_init_write(&send);
 }
 
+/* 把scsi命令加入到队列中 */
 static void scsi_cmnd_exec(struct iscsi_cmnd *cmnd)
 {
 	assert(!cmnd->r2t_length);
@@ -1520,6 +1522,7 @@ static void iscsi_cmnd_exec(struct iscsi_cmnd *cmnd)
 		nop_out_exec(cmnd);
 		break;
 	case ISCSI_OP_SCSI_CMD:
+		/* iscsi 命令操作 */
 		scsi_cmnd_exec(cmnd);
 		break;
 	case ISCSI_OP_SCSI_TASK_MGT_MSG:

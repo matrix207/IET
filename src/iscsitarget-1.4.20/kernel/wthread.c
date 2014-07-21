@@ -11,6 +11,7 @@
 
 struct worker_thread_info *worker_thread_pool;
 
+/* 工作线程队列 */
 void wthread_queue(struct iscsi_cmnd *cmnd)
 {
 	struct worker_thread_info *info = cmnd->conn->session->target->wthread_info;
@@ -35,6 +36,7 @@ void wthread_queue(struct iscsi_cmnd *cmnd)
 	wake_up(&info->wthread_sleep);
 }
 
+/* 提取iscsi命令 */
 static struct iscsi_cmnd * get_ready_cmnd(struct worker_thread_info *info)
 {
 	struct iscsi_cmnd *cmnd = NULL;
@@ -51,14 +53,17 @@ static struct iscsi_cmnd * get_ready_cmnd(struct worker_thread_info *info)
 	return cmnd;
 }
 
+/* 执行命令 */
 static int cmnd_execute(struct iscsi_cmnd *cmnd)
 {
 	int type = cmnd->conn->session->target->trgt_param.target_type;
 
 	assert(target_type_array[type]->execute_cmnd);
+	/* 调用target_disk.c中函数执行操作 */
 	return target_type_array[type]->execute_cmnd(cmnd);
 }
 
+/* 工作线程函数 */
 static int worker_thread(void *arg)
 {
 	struct worker_thread *wt = (struct worker_thread *) arg;
@@ -82,6 +87,7 @@ static int worker_thread(void *arg)
 	do {
 		while (!list_empty(&info->work_queue) &&
 		       (cmnd = get_ready_cmnd(info))) {
+			/* 执行命令 */
 			conn = cmnd->conn;
 			if (cmnd_tmfabort(cmnd))
 				cmnd_release(cmnd, 1);
@@ -113,6 +119,7 @@ static int worker_thread(void *arg)
 	return 0;
 }
 
+/* 启动一个工作线程 */
 static int start_one_worker_thread(struct worker_thread_info *info, u32 tid)
 {
 	struct worker_thread *wt;
@@ -122,21 +129,26 @@ static int start_one_worker_thread(struct worker_thread_info *info, u32 tid)
 		return -ENOMEM;
 
 	wt->w_info = info;
+	/* 创建工作线程, 线程函数跟结构体同名不太好吧 */
 	task = kthread_create(worker_thread, wt, "istiod%d", tid);
 	if (IS_ERR(task)) {
 		kfree(wt);
 		return PTR_ERR(task);
 	}
 
+	/* 保存线程信息,用于后面停止线程 */
 	wt->w_task = task;
+	/* 工作线程加入到线程信息链表中 */
 	list_add(&wt->w_list, &info->wthread_list);
 	info->nr_running_wthreads++;
 
+	/* 马上启动线程 */
 	wake_up_process(task);
 
 	return 0;
 }
 
+/* 停止一个工作线程 */
 static int stop_one_worker_thread(struct worker_thread *wt)
 {
 	struct worker_thread_info *info = wt->w_info;
@@ -155,6 +167,7 @@ static int stop_one_worker_thread(struct worker_thread *wt)
 	return 0;
 }
 
+/* 工作线程初始化 */
 int wthread_init(struct worker_thread_info *info)
 {
 	spin_lock_init(&info->wthread_lock);
@@ -170,10 +183,18 @@ int wthread_init(struct worker_thread_info *info)
 	return 0;
 }
 
+/**
+ * 启动工作线程 
+ *
+ * 参数:
+ *   wthreads, 要创建的线程数目,默认是DEFAULT_NR_WTHREADS, 8个
+ *
+ */
 int wthread_start(struct worker_thread_info *info, int wthreads, u32 tid)
 {
 	int err = 0;
 
+	/* 使用while循环启动wthreads个线程 */
 	while (info->nr_running_wthreads < wthreads) {
 		if ((err = start_one_worker_thread(info, tid)) < 0) {
 			eprintk("Fail to create a worker thread %d\n", err);
@@ -181,6 +202,7 @@ int wthread_start(struct worker_thread_info *info, int wthreads, u32 tid)
 		}
 	}
 
+	/* 如果工作线程查过最大值, 停止一个 */
 	while (info->nr_running_wthreads > wthreads) {
 		struct worker_thread *wt;
 		wt = list_entry(info->wthread_list.next, struct worker_thread, w_list);
@@ -193,6 +215,7 @@ out:
 	return err;
 }
 
+/* 停止所有工作线程 */
 int wthread_stop(struct worker_thread_info *info)
 {
 	struct worker_thread *wt, *tmp;
@@ -208,6 +231,7 @@ int wthread_stop(struct worker_thread_info *info)
 	return err;
 }
 
+/* 工作线程模块初始化 */
 int wthread_module_init()
 {
 	int err;
