@@ -13,6 +13,7 @@
 static struct sock *nl;
 static u32 ietd_pid;
 
+/* 消息处理，获取用户态ietd的进程号 */
 static int event_recv_msg(struct sk_buff *skb, struct nlmsghdr *nlh)
 {
 	u32 uid, pid, seq;
@@ -23,11 +24,13 @@ static int event_recv_msg(struct sk_buff *skb, struct nlmsghdr *nlh)
 	seq  = nlh->nlmsg_seq;
 	data = NLMSG_DATA(nlh);
 
+	/* 保存ietd的进程ID号 */
 	ietd_pid = pid;
 
 	return 0;
 }
 
+/* 处理netlink通信数据的函数 */
 static void event_recv_skb(struct sk_buff *skb)
 {
 	int err;
@@ -45,10 +48,12 @@ static void event_recv_skb(struct sk_buff *skb)
 			netlink_ack(skb, nlh, -err);
 		} else if (nlh->nlmsg_flags & NLM_F_ACK)
 			netlink_ack(skb, nlh, 0);
+		/* 从skb起始处删除长度为rlen的数据 */
 		skb_pull(skb, rlen);
 	}
 }
 
+/* 供event_send调用, 通过进程ID指定发送给ietd */
 static int notify(void *data, int len, int gfp_mask)
 {
 	struct sk_buff *skb;
@@ -58,6 +63,7 @@ static int notify(void *data, int len, int gfp_mask)
 	if (!(skb = alloc_skb(NLMSG_SPACE(len), gfp_mask)))
 		return -ENOMEM;
 
+	/* 向进程ietd_pid发送信息 */
 	nlh = __nlmsg_put(skb, ietd_pid, seq++, NLMSG_DONE, len - sizeof(*nlh), 0);
 
 	memcpy(NLMSG_DATA(nlh), data, len);
@@ -65,6 +71,7 @@ static int notify(void *data, int len, int gfp_mask)
 	return netlink_unicast(nl, skb, ietd_pid, 0);
 }
 
+/* 发送状态信息给用户态 */
 int event_send(u32 tid, u64 sid, u32 cid, u32 state, int atomic)
 {
 	int err;
@@ -80,6 +87,9 @@ int event_send(u32 tid, u64 sid, u32 cid, u32 state, int atomic)
 	return err;
 }
 
+/**
+ * 创建 netlink 网络通信 
+ */
 int event_init(void)
 {
 	nl = netlink_kernel_create(&init_net, NETLINK_IET, 1, event_recv_skb,

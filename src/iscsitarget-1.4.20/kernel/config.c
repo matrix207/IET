@@ -16,6 +16,7 @@ struct proc_entries {
 	struct file_operations *fops;
 };
 
+/* 定义proc文件系统下的文件名以及对应操作 */
 static struct proc_entries iet_proc_entries[] =
 {
 	{"volume", &volume_seq_fops},
@@ -24,6 +25,10 @@ static struct proc_entries iet_proc_entries[] =
 
 static struct proc_dir_entry *proc_iet_dir;
 
+/**
+ * 删除目录 /proc/net/iet
+ * 删除文件 volume 和 session
+ */
 void iet_procfs_exit(void)
 {
 	int i;
@@ -37,6 +42,10 @@ void iet_procfs_exit(void)
 	remove_proc_entry(proc_iet_dir->name, proc_iet_dir->parent);
 }
 
+/**
+ * 创建目录 /proc/net/iet
+ * 创建文件 volume 和 session
+ */
 int iet_procfs_init(void)
 {
 	int i;
@@ -62,6 +71,7 @@ err:
 	return -ENOMEM;
 }
 
+/* 从内核态到用户态，拷贝模块版本信息 */
 static int get_module_info(unsigned long ptr)
 {
 	struct module_info info;
@@ -76,6 +86,7 @@ static int get_module_info(unsigned long ptr)
 	return 0;
 }
 
+/* 从内核态到用户态，拷贝连接信息 */
 static int get_conn_info(struct iscsi_target *target, unsigned long ptr)
 {
 	struct iscsi_session *session;
@@ -87,10 +98,12 @@ static int get_conn_info(struct iscsi_target *target, unsigned long ptr)
 	if (err)
 		return -EFAULT;
 
+	/* 根据session id 查询session */
 	session = session_lookup(target, info.sid);
 	if (!session)
 		return -ENOENT;
 
+	/* 根据connect id 查询session中的connect */
 	conn = conn_lookup(session, info.cid);
 	if (!conn)
 		return -ENOENT;
@@ -106,6 +119,7 @@ static int get_conn_info(struct iscsi_target *target, unsigned long ptr)
 	return 0;
 }
 
+/* 连接信息从用户态转入内核态 */
 static int add_conn(struct iscsi_target *target, unsigned long ptr)
 {
 	struct iscsi_session *session;
@@ -123,6 +137,7 @@ static int add_conn(struct iscsi_target *target, unsigned long ptr)
 	return conn_add(session, &info);
 }
 
+/* 从内核态删除连接 */
 static int del_conn(struct iscsi_target *target, unsigned long ptr)
 {
 	struct iscsi_session *session;
@@ -140,6 +155,7 @@ static int del_conn(struct iscsi_target *target, unsigned long ptr)
 	return conn_del(session, &info);
 }
 
+/* 从内核态到用户态，拷贝对话信息 */
 static int get_session_info(struct iscsi_target *target, unsigned long ptr)
 {
 	struct iscsi_session *session;
@@ -164,6 +180,7 @@ static int get_session_info(struct iscsi_target *target, unsigned long ptr)
 	return 0;
 }
 
+/* 对话信息从用户态转入内核态 */
 static int add_session(struct iscsi_target *target, unsigned long ptr)
 {
 	struct session_info info;
@@ -176,6 +193,7 @@ static int add_session(struct iscsi_target *target, unsigned long ptr)
 	return session_add(target, &info);
 }
 
+/* 从内核态删除对话 */
 static int del_session(struct iscsi_target *target, unsigned long ptr)
 {
 	struct session_info info;
@@ -188,6 +206,7 @@ static int del_session(struct iscsi_target *target, unsigned long ptr)
 	return session_del(target, info.sid);
 }
 
+/* 卷信息从用户态转入内核态 */
 static int add_volume(struct iscsi_target *target, unsigned long ptr)
 {
 	struct volume_info info;
@@ -200,6 +219,7 @@ static int add_volume(struct iscsi_target *target, unsigned long ptr)
 	return volume_add(target, &info);
 }
 
+/* 从内核态删除卷 */
 static int del_volume(struct iscsi_target *target, unsigned long ptr)
 {
 	struct volume_info info;
@@ -212,6 +232,7 @@ static int del_volume(struct iscsi_target *target, unsigned long ptr)
 	return iscsi_volume_del(target, &info);
 }
 
+/* 配置信息?从内核态转为用户态 */
 static int iscsi_param_config(struct iscsi_target *target, unsigned long ptr, int set)
 {
 	struct iscsi_param_info info;
@@ -232,6 +253,7 @@ static int iscsi_param_config(struct iscsi_target *target, unsigned long ptr, in
 	return 0;
 }
 
+/* target信息从内核态转为用户态 */
 static int add_target(unsigned long ptr)
 {
 	struct target_info info;
@@ -252,6 +274,7 @@ static int add_target(unsigned long ptr)
 	return 0;
 }
 
+/* 定义操作逻辑 */
 static long ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 {
 	struct iscsi_target *target = NULL;

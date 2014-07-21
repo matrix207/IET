@@ -1914,14 +1914,17 @@ static int iscsi_init(void)
 
 	printk("iSCSI Enterprise Target Software - version %s\n", IET_VERSION_STRING);
 
+	/* 注册字符设备 /dev/ietctl */
 	if ((ctr_major = register_chrdev(0, ctr_name, &ctr_fops)) < 0) {
 		eprintk("failed to register the control device %d\n", ctr_major);
 		return ctr_major;
 	}
 
+	/* 初始化 proc文件系统 */
 	if ((err = iet_procfs_init()) < 0)
 		goto err;
 
+	/* 初始化 netlink 通信 */
 	if ((err = event_init()) < 0)
 		goto err;
 

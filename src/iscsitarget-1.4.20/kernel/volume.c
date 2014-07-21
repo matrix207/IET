@@ -381,6 +381,7 @@ int volume_release(struct iet_volume *volume, u64 sid, int force)
 	return err;
 }
 
+/* 显示信息到/proc/net/iet/volume */
 static void iet_volume_info_show(struct seq_file *seq, struct iscsi_target *target)
 {
 	struct iet_volume *volume;

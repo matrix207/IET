@@ -53,6 +53,7 @@ static struct iscsi_key login_keys[] = {
 	{NULL, 0, 0, 0, NULL},
 };
 
+/* 根据key，查找对应的value */
 char *text_key_find(struct connection *conn, char *searchKey)
 {
 	char *data, *key, *value;
