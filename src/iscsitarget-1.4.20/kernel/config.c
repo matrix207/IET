@@ -126,10 +126,12 @@ static int add_conn(struct iscsi_target *target, unsigned long ptr)
 	struct conn_info info;
 	int err;
 
+	/* 拷贝用户态连接信息 */
 	err = copy_from_user(&info, (void *) ptr, sizeof(info));
 	if (err)
 		return -EFAULT;
 
+	/* 根据target和用户态连接信息中的会话id, 找到会话信息 */
 	session = session_lookup(target, info.sid);
 	if (!session)
 		return -ENOENT;

@@ -19,6 +19,7 @@ static int event_recv_msg(struct sk_buff *skb, struct nlmsghdr *nlh)
 	u32 uid, pid, seq;
 	char *data;
 
+	/* 这几个信息没有用处? */
 	pid  = NETLINK_CREDS(skb)->pid;
 	uid  = NETLINK_CREDS(skb)->uid;
 	seq  = nlh->nlmsg_seq;
@@ -60,6 +61,7 @@ static int notify(void *data, int len, int gfp_mask)
 	struct nlmsghdr *nlh;
 	static u32 seq = 0;
 
+	/* 申请内存 */
 	if (!(skb = alloc_skb(NLMSG_SPACE(len), gfp_mask)))
 		return -ENOMEM;
 

@@ -150,6 +150,7 @@ int session_del(struct iscsi_target *target, u64 sid)
 	return session_free(session);
 }
 
+/* 显示会话信息 */
 static void iet_session_info_show(struct seq_file *seq, struct iscsi_target *target)
 {
 	struct iscsi_session *session;

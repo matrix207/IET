@@ -181,7 +181,10 @@ static void create_listen_socket(struct pollfd *array)
 	freeaddrinfo(res0);
 }
 
-/* 接受连接请求 */
+/**
+ * 接受连接请求 
+ * 这些连接请求是从内核态发过来的吗?
+ */
 static void accept_connection(int listen)
 {
 	struct sockaddr_storage from;

@@ -231,7 +231,7 @@ struct iscsi_session {
 	struct iscsi_sess_param param;
 	u32 max_queued_cmnds;
 
-	/* connect 链表 */
+	/* connect 链表, 属于该session的连接会挂载到这里? */
 	struct list_head conn_list;
 
 	struct list_head pending_list;

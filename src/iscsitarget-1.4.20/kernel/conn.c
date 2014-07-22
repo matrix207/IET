@@ -33,6 +33,7 @@ static void print_digest_state(char *p, size_t size, unsigned long flags)
 		snprintf(p, size, "%s", "unknown");
 }
 
+/* 显示会话下的所有连接信息 */
 void conn_info_show(struct seq_file *seq, struct iscsi_session *session)
 {
 	struct iscsi_conn *conn;
@@ -63,6 +64,7 @@ void conn_info_show(struct seq_file *seq, struct iscsi_session *session)
 	}
 }
 
+/* 根据连接id查找会话中的连接信息 */
 struct iscsi_conn *conn_lookup(struct iscsi_session *session, u16 cid)
 {
 	struct iscsi_conn *conn;
@@ -92,6 +94,7 @@ static void iet_data_ready(struct sock *sk, int len)
 	struct iscsi_conn *conn = sk->sk_user_data;
 	struct iscsi_target *target = conn->session->target;
 
+	/* 唤醒target */
 	nthread_wakeup(target);
 	target->nthread_info.old_data_ready(sk, len);
 }
@@ -118,6 +121,7 @@ static void iet_write_space(struct sock *sk)
 	info->old_write_space(sk);
 }
 
+/* 该函数的作用是什么? */
 static void iet_socket_bind(struct iscsi_conn *conn)
 {
 	int opt = 1;
@@ -166,16 +170,19 @@ int conn_free(struct iscsi_conn *conn)
 	return 0;
 }
 
+/* 创建新的连接 */
 static int iet_conn_alloc(struct iscsi_session *session, struct conn_info *info)
 {
 	struct iscsi_conn *conn;
 
 	dprintk(D_SETUP, "%#Lx:%u\n", (unsigned long long) session->sid, info->cid);
 
+	/* 申请空间 */
 	conn = kzalloc(sizeof(*conn), GFP_KERNEL);
 	if (!conn)
 		return -ENOMEM;
 
+	/* 拷贝连接信息 */
 	conn->session = session;
 	conn->cid = info->cid;
 	conn->stat_sn = info->stat_sn;
@@ -188,6 +195,7 @@ static int iet_conn_alloc(struct iscsi_session *session, struct conn_info *info)
 		return -ENOMEM;
 	}
 
+	/* 初始化其他信息 */
 	spin_lock_init(&conn->list_lock);
 	atomic_set(&conn->nr_cmnds, 0);
 	atomic_set(&conn->nr_busy_cmnds, 0);
@@ -196,15 +204,19 @@ static int iet_conn_alloc(struct iscsi_session *session, struct conn_info *info)
 	INIT_LIST_HEAD(&conn->poll_list);
 	init_timer(&conn->nop_timer);
 
+	/* 当前连接的list挂载到session的conn_list */
 	list_add(&conn->list, &session->conn_list);
 
 	set_bit(CONN_ACTIVE, &conn->state);
 
+	/* 根据fd指定的索引，从当前进程描述符取出相应的file对象 */
 	conn->file = fget(info->fd);
 	iet_socket_bind(conn);
 
+	/* ? */
 	list_add(&conn->poll_list, &session->target->nthread_info.active_conns);
 
+	/* 唤醒target */
 	nthread_wakeup(conn->session->target);
 
 	return 0;
@@ -228,6 +240,7 @@ void conn_close(struct iscsi_conn *conn)
 	}
 	spin_unlock(&conn->list_lock);
 
+	/* 唤醒target */
 	nthread_wakeup(conn->session->target);
 }
 
@@ -236,10 +249,13 @@ int conn_add(struct iscsi_session *session, struct conn_info *info)
 	struct iscsi_conn *conn;
 	int err;
 
+	/* 根据会话信息和用户态连接信息中的连接id，找到内核态连接信息 */
 	conn = conn_lookup(session, info->cid);
+	/* 关闭该连接? */
 	if (conn)
 		conn_close(conn);
 
+	/* 创建新的连接 */
 	err = iet_conn_alloc(session, info);
 	if (!err && conn)
 		err = -EEXIST;
