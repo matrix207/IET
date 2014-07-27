@@ -49,6 +49,7 @@ struct buf_segment {
 	char data[0];
 };
 
+/* 协议数据单元 */
 struct PDU {
 	struct iscsi_hdr bhs;
 	void *ahs;
@@ -61,6 +62,7 @@ struct PDU {
 #define KEY_STATE_REQUEST	1
 #define KEY_STATE_DONE		2
 
+/* 用户态会话 */
 struct session {
 	struct __qelem slist;
 
@@ -71,6 +73,7 @@ struct session {
 	int conn_cnt;
 };
 
+/* 用户态连接 */
 struct connection {
 	int state;
 	int iostate;
@@ -167,6 +170,7 @@ enum {
 	POLL_MAX = POLL_INCOMING + INCOMING_MAX,
 };
 
+/* target */
 struct target {
 	struct __qelem tlist;
 
