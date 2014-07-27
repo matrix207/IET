@@ -1,0 +1,143 @@
+/* Module PDU of ISCSI Enterprise Target Digraph 
+ * Create by Dennis 
+ * 2014-07-27
+ */
+
+digraph PDU {
+    node [shape=record fontsize=12 fontname=Courier style=filled];
+    edge[color=blue]; rankdir=LR;
+
+subgraph cluster_pdu {
+    node [shape=record fontsize=12 fontname=Courier style=filled];
+    color = lightgray; style=filled; label = "struct pdu "; edge[color="#2e3436"];
+	node_pdu [shape=record label="<f0>*** struct pdu  ***|\
+<f1>struct iscsi_hdr bhs;\n|\
+<f2>void *ahs;\n|\
+<f3>unsigned int ahssize;\n|\
+<f4>void *data;\n|\
+<f5>unsigned int datasize;\n|<f999>\
+"];
+}
+
+subgraph cluster_iscsi_hdr {
+    node [shape=record fontsize=12 fontname=Courier style=filled];
+    color = lightgray; style=filled; label = "struct iscsi_hdr "; edge[color="#2e3436"];
+	node_iscsi_hdr [shape=record label="<f0>*** struct iscsi_hdr  ***|\
+<f1>u8  opcode;	\n|\
+<f2>u8  flags;\n|\
+<f3>u8  spec1[2];\n|\
+<f4>u8  ahslength;\n|\
+<f5>u8  datalength[3];\n|\
+<f6>u16 lun[4];\n|\
+<f7>u32 itt;\n|\
+<f8>u32 ttt;\n|\
+<f9>u32 sn;	\n|\
+<f10>u32 exp_sn;\n|\
+<f11>u32 max_sn;	\n|\
+<f12>u32 spec3[3];\n|<f999>\
+"];
+}
+
+subgraph cluster_iscsi_ahs_hdr {
+    node [shape=record fontsize=12 fontname=Courier style=filled];
+    color = lightgray; style=filled; label = "struct iscsi_ahs_hdr "; edge[color="#2e3436"];
+	node_iscsi_ahs_hdr [shape=record label="<f0>*** struct iscsi_ahs_hdr  ***|\
+<f1>u16 ahslength;\n|\
+<f2>u8 ahstype;\n\
+"];
+}
+
+subgraph cluster_iscsi_sid {
+    node [shape=record fontsize=12 fontname=Courier style=filled];
+    color = lightgray; style=filled; label = "struct iscsi_sid "; edge[color="#2e3436"];
+	node_iscsi_sid [shape=record label="<f0>*** struct iscsi_sid  ***|\
+<f1>u8 isid[6];\n|\
+<f2>u16 tsih;\n|\
+<f3>u64 id64;\n\
+"];
+}
+
+subgraph cluster_iscsi_text_req_hdr {
+    node [shape=record fontsize=12 fontname=Courier style=filled];
+    color = lightgray; style=filled; label = "struct iscsi_text_req_hdr "; edge[color="#2e3436"];
+	node_iscsi_text_req_hdr [shape=record label="<f0>*** struct iscsi_text_req_hdr  ***|\
+<f1>u8  opcode;\n|\
+<f2>u8  flags;\n|\
+<f3>u16 rsvd1;\n|\
+<f4>u8  ahslength;\n|\
+<f5>u8  datalength[3];\n|\
+<f6>u32 rsvd2[2];\n|\
+<f7>u32 itt;\n|\
+<f8>u32 ttt;\n|\
+<f9>u32 cmd_sn;\n|\
+<f10>u32 exp_stat_sn;\n|\
+<f11>u32 rsvd3[4]; \n\
+"];
+}
+
+subgraph cluster_iscsi_text_rsp_hdr {
+    node [shape=record fontsize=12 fontname=Courier style=filled];
+    color = lightgray; style=filled; label = "struct iscsi_text_rsp_hdr "; edge[color="#2e3436"];
+	node_iscsi_text_rsp_hdr [shape=record label="<f0>*** struct iscsi_text_rsp_hdr  ***|\
+<f1>u8  opcode;\n|\
+<f2>u8  flags;\n|\
+<f3>u16 rsvd1;\n|\
+<f4>u8  ahslength;\n|\
+<f5>u8  datalength[3];\n|\
+<f6>u32 rsvd2[2];\n|\
+<f7>u32 itt;\n|\
+<f8>u32 ttt;\n|\
+<f9>u32 stat_sn;\n|\
+<f10>u32 exp_cmd_sn;\n|\
+<f11>u32 max_cmd_sn;\n|\
+<f12>u32 rsvd3[3]; \n\
+"];
+}
+
+subgraph cluster_iscsi_login_req_hdr {
+    node [shape=record fontsize=12 fontname=Courier style=filled];
+    color = lightgray; style=filled; label = "struct iscsi_login_req_hdr "; edge[color="#2e3436"];
+	node_iscsi_login_req_hdr [shape=record label="<f0>*** struct iscsi_login_req_hdr  ***|\
+<f1>u8  opcode;\n|\
+<f2>u8  flags;\n|\
+<f3>u8  max_version;\n|\
+<f4>u8  min_version;\n|\
+<f5>u8  ahslength;\n|\
+<f6>u8  datalength[3];\n|\
+<f7>union iscsi_sid sid;\n|\
+<f8>u32 itt;\n|\
+<f9>u16 cid;\n|\
+<f10>u16 rsvd1;\n|\
+<f11>u32 cmd_sn;\n|\
+<f12>u32 exp_stat_sn;\n|\
+<f13>u32 rsvd2[4]; \n\
+"];
+}
+
+
+subgraph cluster_iscsi_login_rsp_hdr {
+    node [shape=record fontsize=12 fontname=Courier style=filled];
+    color = lightgray; style=filled; label = "struct iscsi_login_rsp_hdr "; edge[color="#2e3436"];
+	node_iscsi_login_rsp_hdr [shape=record label="<f0>*** struct iscsi_login_rsp_hdr  ***|\
+<f1>u8  opcode;\n|\
+<f2>u8  flags;\n|\
+<f3>u8  max_version;\n|\
+<f4>u8  active_version;\n|\
+<f5>u8  ahslength;\n|\
+<f6>u8  datalength[3];\n|\
+<f7>union iscsi_sid sid;\n|\
+<f8>u32 itt;\n|\
+<f9>u32 rsvd1;\n|\
+<f10>u32 stat_sn;\n|\
+<f11>u32 exp_cmd_sn;\n|\
+<f12>u32 max_cmd_sn;\n|\
+<f13>u8  status_class;\n|\
+<f14>u8  status_detail;\n|\
+<f15>u8  rsvd2[10];\n\
+"];
+}
+
+/* Relation */
+node_pdu:f1 -> node_iscsi_hdr:f0[color=green];
+
+}

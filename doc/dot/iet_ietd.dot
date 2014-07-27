@@ -1,0 +1,118 @@
+/* Module IETD of ISCSI Enterprise Target Digraph 
+ * Create by Dennis 
+ * 2014-07-27
+ */
+
+digraph IETD {
+    node [shape=record fontsize=12 fontname=Courier style=filled];
+    edge[color=blue]; rankdir=LR;
+
+subgraph cluster_iscsi_hdr {
+    node [shape=record fontsize=12 fontname=Courier style=filled];
+    color = lightgray; style=filled; label = "struct iscsi_hdr "; edge[color="#2e3436"];
+	node_iscsi_hdr [shape=record label="<f0>*** struct iscsi_hdr  ***|\
+<f1>u8  opcode;	\n|\
+<f2>u8  flags;\n|\
+<f3>u8  spec1[2];\n|\
+<f4>u8  ahslength;\n|\
+<f5>u8  datalength[3];\n|\
+<f6>u16 lun[4];\n|\
+<f7>u32 itt;\n|\
+<f8>u32 ttt;\n|\
+<f9>u32 sn;	\n|\
+<f10>u32 exp_sn;\n|\
+<f11>u32 max_sn;	\n|\
+<f12>u32 spec3[3];\n|<f999>\
+"];
+}
+
+subgraph cluster_buf_segment {
+    node [shape=record fontsize=12 fontname=Courier style=filled];
+    color = lightgray; style=filled; label = "struct buf_segment "; edge[color="#2e3436"];
+	node_buf_segment [shape=record label="<f0>*** struct buf_segment  ***|\
+<f0>struct __qelem entry;\n|\
+<f1>unsigned int len;\n|\
+<f2>char data[0];\n|<f999>\
+"];
+}
+
+subgraph cluster_pdu {
+    node [shape=record fontsize=12 fontname=Courier style=filled];
+    color = lightgray; style=filled; label = "struct pdu "; edge[color="#2e3436"];
+	node_pdu [shape=record label="<f0>*** struct pdu  ***|\
+<f1>struct iscsi_hdr bhs;\n|\
+<f2>void *ahs;\n|\
+<f3>unsigned int ahssize;\n|\
+<f4>void *data;\n|\
+<f5>unsigned int datasize;\n|<f999>\
+"];
+}
+
+subgraph cluster_session {
+    node [shape=record fontsize=12 fontname=Courier style=filled];
+    color = lightgray; style=filled; label = "struct session "; edge[color="#2e3436"];
+	node_session [shape=record label="<f0>*** struct session  ***|\
+<f1>struct __qelem slist;\n|\
+<f2>char *initiator;\n|\
+<f3>struct target *target;\n|\
+<f4>union iscsi_sid sid;\n|\
+<f5>int conn_cnt;\n|<f999>\
+"];
+}
+
+subgraph cluster_connection {
+    node [shape=record fontsize=12 fontname=Courier style=filled];
+    color = lightgray; style=filled; label = "struct connection "; edge[color="#2e3436"];
+	node_connection [shape=record label="<f0>*** struct connection  ***|\
+<f1>int state;\n|\
+<f2>int iostate;\n|\
+<f3>int fd;\n|\
+<f4>struct session *session;\n|\
+<f5>u32 tid;\n|\
+<f6>struct iscsi_param session_param[];\n|\
+<f7>char *initiator;\n|\
+<f8>union iscsi_sid sid;\n|\
+<f9>u16 cid;\n|\
+<f10>int session_type;\n|\
+<f11>int auth_method;\n|\
+<f12>u32 stat_sn;\n|\
+<f13>u32 exp_stat_sn;\n|\
+<f14>u32 cmd_sn;\n|\
+<f15>u32 exp_cmd_sn;\n|\
+<f16>u32 max_cmd_sn;\n|\
+<f17>u32 ttt;\n|\
+<f18>struct PDU req;\n|\
+<f19>void *req_buffer;\n|\
+<f20>struct PDU rsp;\n|\
+<f21>struct __qelem rsp_buf_list;\n|\
+<f22>unsigned char *buffer;\n|\
+<f23>int rwsize;\n|\
+<f24>int auth_state;\n|\
+<f25>struct chap;\n|<f999>\
+"];
+}
+
+subgraph cluster_target {
+    node [shape=record fontsize=12 fontname=Courier style=filled];
+	color = lightgray; style=filled; label = "struct target "; edge[color="#2e3436"];
+	node_target [shape=record label="<f0>*** struct target  ***|\
+<f2>struct __qelem tlist;\n|\
+<f3>struct __qelem sessions_list;\n|\
+<f4>u32 tid;\n|\
+<f5>char name[ISCSI_NAME_LEN];\n|\
+<f6>char *alias;\n|\
+<f7>struct redirect_addr redirect;\n|\
+<f8>int max_nr_sessions;\n|\
+<f9>int nr_sessions;\n|\
+<f10>struct __qelem isns_head;\n|<f999>\
+"];
+}
+
+/* Relation */
+node_session:f3 -> node_target:f0;
+node_connection:f4 -> node_session;
+node_connection:f18 -> node_pdu:f0;
+node_connection:f20 -> node_pdu:f0;
+node_pdu:f1 -> node_iscsi_hdr:f0[color=green];
+
+}
