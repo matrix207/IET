@@ -1935,16 +1935,25 @@ static int iscsi_init(void)
 	if (!iscsi_cmnd_cache)
 		goto err;
 
+	/* Unit Attention 初始化 */
 	err = ua_init();
 	if (err < 0)
 		goto err;
 
+	/* target io 初始化 */
 	if ((err = tio_init()) < 0)
 		goto err;
 
+	/* 
+	 * io 类型 初始化
+	 * fileio,
+	 * blockio,
+	 * nullio,
+	 */
 	if ((err = iotype_init()) < 0)
 		goto err;
 
+	/* 工作线程模块初始化 */
 	if ((err = wthread_module_init()) < 0)
 		goto err;
 
