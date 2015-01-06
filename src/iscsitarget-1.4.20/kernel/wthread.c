@@ -202,7 +202,7 @@ int wthread_start(struct worker_thread_info *info, int wthreads, u32 tid)
 		}
 	}
 
-	/* 如果工作线程查过最大值, 停止一个 */
+	/* 如果工作线程超过最大值, 停止一个 */
 	while (info->nr_running_wthreads > wthreads) {
 		struct worker_thread *wt;
 		wt = list_entry(info->wthread_list.next, struct worker_thread, w_list);
