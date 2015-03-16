@@ -182,6 +182,7 @@ struct iet_volume {
 	u8 scsi_id[SCSI_ID_LEN];
 	u8 scsi_sn[SCSI_SN_LEN + 1];
 
+	/* 块大小的幂的次数，如:1024=2^10, blk_shift值为10 */
 	u32 blk_shift;
 	u64 blk_cnt;
 
@@ -189,10 +190,18 @@ struct iet_volume {
 	/* 自旋锁 */
 	spinlock_t reserve_lock;
 
+	/* IO模式: wb, wt. 可能的值为枚举型结构体lu_flags */
 	unsigned long flags;
 
-	/* io类型 */
+	/* io类型: fileio, blockio
+	 *         fileio 会经过vfs层
+	 *         blockio 不经过vfs
+	 */
 	struct iotype *iotype;
+	/* private根据不同的io类型执行不同的数据结构
+	 *   文件类型 --> struct fileio_data
+	 *     块类型 --> struct blockio_data
+	 */
 	void *private;
 };
 
@@ -202,13 +211,16 @@ enum lu_flags {
 	LU_RCACHE,
 };
 
+/* 只读状态 */
 #define LUReadonly(lu) test_bit(LU_READONLY, &(lu)->flags)
 #define SetLUReadonly(lu) set_bit(LU_READONLY, &(lu)->flags)
 
+/* 写缓冲操作 */
 #define LUWCache(lu) test_bit(LU_WCACHE, &(lu)->flags)
 #define SetLUWCache(lu) set_bit(LU_WCACHE, &(lu)->flags)
 #define ClearLUWCache(lu) clear_bit(LU_WCACHE, &(lu)->flags)
 
+/* 读缓冲操作 */
 #define LURCache(lu) test_bit(LU_RCACHE, &(lu)->flags)
 #define SetLURCache(lu) set_bit(LU_RCACHE, &(lu)->flags)
 #define ClearLURCache(lu) clear_bit(LU_RCACHE, &(lu)->flags)

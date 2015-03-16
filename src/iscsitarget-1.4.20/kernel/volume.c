@@ -142,6 +142,9 @@ static int parse_volume_params(struct iet_volume *volume, char *params)
 				err = -ENOMEM;
 				break;
 			}
+			/* 根据参数Type=fileio或blockio，得到具体的io操作结构体指针，
+			 * 用于后面具体读或写请求是执行文件IO还是块IO做准备
+			 */
 			if (!(volume->iotype = get_iotype(argp)))
 				err = -ENOENT;
 			kfree(argp);
@@ -152,6 +155,8 @@ static int parse_volume_params(struct iet_volume *volume, char *params)
 				err = -ENOMEM;
 				break;
 			}
+			/* iomode 只有三种: ro, wb, wt
+			 */
 			if (!strcmp(argp, "ro"))
 				SetLUReadonly(volume);
 			else if (!strcmp(argp, "wb"))
@@ -185,6 +190,9 @@ static int parse_volume_params(struct iet_volume *volume, char *params)
 				break;
 			}
 			blk_sz = simple_strtoull(argp, NULL, 10);
+			/* 块大小必须是2的幂次方，且大于或等于512，小于或等于4096(4k),
+			 * 结构体对应的blk_shift域只保存幂的次数
+			 */
 			if (is_power_of_2(blk_sz) &&
 			    512 <= blk_sz && blk_sz <= IET_MAX_BLOCK_SIZE)
 				volume->blk_shift = ilog2(blk_sz);
@@ -222,6 +230,7 @@ int volume_add(struct iscsi_target *target, struct volume_info *info)
 	if (info->lun > 0x3fff)
 		return -EINVAL;
 
+	/* 为volume申请内核空间 */
 	volume = kzalloc(sizeof(*volume), GFP_KERNEL);
 	if (!volume)
 		return -ENOMEM;

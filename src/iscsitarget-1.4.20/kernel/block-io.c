@@ -318,6 +318,9 @@ blockio_show(struct iet_volume *volume, struct seq_file *seq)
 	seq_printf(seq, " path:%s\n", bio_data->path);
 }
 
+/* 块设置io
+ *   块设置不需要缓冲写(write-back), 所以不需要定义sync
+ */
 struct iotype blockio = {
 	.name = "blockio",
 	.attach = blockio_attach,
