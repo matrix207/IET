@@ -1,0 +1,140 @@
+/**********************************************
+* Auto generate by ds2img.py
+* Author:  matrix207
+* Date  :  2014-07-28 15:50:39
+**********************************************/
+
+digraph DS2IMG {
+	node [shape=record fontsize=12 fontname=Courier style=filled];
+	edge[color=blue]; rankdir=LR;
+
+subgraph cluster_buf_segment {
+    node [shape=record fontsize=12 fontname=Courier style=filled];
+    color = lightgray; style=filled; label = "struct buf_segment "; edge[color="#2e3436"];
+    node_buf_segment [shape=record label="<f0>*** struct buf_segment ***\
+|<f1>struct __qelem entry;\n\
+|<f2>unsigned int len;\n\
+|<f3>char data[0];\n\
+"];
+}
+
+subgraph cluster_PDU {
+    node [shape=record fontsize=12 fontname=Courier style=filled];
+    color = lightgray; style=filled; label = "struct PDU "; edge[color="#2e3436"];
+    node_PDU [shape=record label="<f0>*** struct PDU ***\
+|<f1>struct iscsi_hdr bhs;\n\
+|<f2>void *ahs;\n\
+|<f3>unsigned int ahssize;\n\
+|<f4>void *data;\n\
+|<f5>unsigned int datasize;\n\
+"];
+}
+
+subgraph cluster_session {
+    node [shape=record fontsize=12 fontname=Courier style=filled];
+    color = lightgray; style=filled; label = "struct session "; edge[color="#2e3436"];
+    node_session [shape=record label="<f0>*** struct session ***\
+|<f1>struct __qelem slist;\n\
+|<f2>char *initiator;\n\
+|<f3>struct target *target;\n\
+|<f4>union iscsi_sid sid;\n\
+|<f5>int conn_cnt;\n\
+"];
+}
+
+subgraph cluster_connection {
+    node [shape=record fontsize=12 fontname=Courier style=filled];
+    color = lightgray; style=filled; label = "struct connection "; edge[color="#2e3436"];
+    node_connection [shape=record label="<f0>*** struct connection ***\
+|<f1>int state;\n\
+|<f2>int iostate;\n\
+|<f3>int fd;\n\
+|<f4>struct session *session;\n\
+|<f5>u32 tid;\n\
+|<f6>struct iscsi_param session_param[session_key_last];\n\
+|<f7>char *initiator;\n\
+|<f8>union iscsi_sid sid;\n\
+|<f9>u16 cid;\n\
+|<f10>int session_type;\n\
+|<f11>int auth_method;\n\
+|<f12>u32 stat_sn;\n\
+|<f13>u32 exp_stat_sn;\n\
+|<f14>u32 cmd_sn;\n\
+|<f15>u32 exp_cmd_sn;\n\
+|<f16>u32 max_cmd_sn;\n\
+|<f17>u32 ttt;\n\
+|<f18>struct PDU req;\n\
+|<f19>void *req_buffer;\n\
+|<f20>struct PDU rsp;\n\
+|<f21>struct __qelem rsp_buf_list;\n\
+|<f22>unsigned char *buffer;\n\
+|<f23>int rwsize;\n\
+|<f24>int auth_state;\n\
+|<f25>union {\n\
+|<f26>struct {\n\
+|<f27>int digest_alg;\n\
+|<f28>int id;\n\
+|<f29>int challenge_size;\n\
+|<f30>unsigned char *challenge;\n\
+|<f31>} chap;\n\
+|<f32>} auth;\n\
+"];
+}
+
+subgraph cluster_target {
+    node [shape=record fontsize=12 fontname=Courier style=filled];
+    color = lightgray; style=filled; label = "struct target "; edge[color="#2e3436"];
+    node_target [shape=record label="<f0>*** struct target ***\
+|<f1>struct __qelem tlist;\n\
+|<f2>struct __qelem sessions_list;\n\
+|<f3>u32 tid;\n\
+|<f4>char name[ISCSI_NAME_LEN];\n\
+|<f5>char *alias;\n\
+|<f6>struct redirect_addr {\n\
+|<f7>char addr[NI_MAXHOST + 1];\n\
+|<f8>char port[NI_MAXSERV + 1];\n\
+|<f9>u8 type;\n\
+|<f10>} redirect;\n\
+|<f11>int max_nr_sessions;\n\
+|<f12>int nr_sessions;\n\
+|<f13>struct __qelem isns_head;\n\
+"];
+}
+
+subgraph cluster_iscsi_kernel_interface {
+    node [shape=record fontsize=12 fontname=Courier style=filled];
+    color = lightgray; style=filled; label = "struct iscsi_kernel_interface "; edge[color="#2e3436"];
+    node_iscsi_kernel_interface [shape=record label="<f0>*** struct iscsi_kernel_interface ***\
+|<f1>int (*ctldev_open) (void);\n\
+|<f2>int (*module_info) (struct module_info *);\n\
+|<f3>int (*lunit_create) (u32 tid, u32 lun, char *args);\n\
+|<f4>int (*lunit_destroy) (u32 tid, u32 lun);\n\
+|<f5>int (*param_get) (u32, u64, int, struct iscsi_param *);\n\
+|<f6>int (*param_set) (u32, u64, int, u32, struct iscsi_param *);\n\
+|<f7>int (*target_create) (u32 *, char *);\n\
+|<f8>int (*target_destroy) (u32);\n\
+|<f9>int (*session_create) (u32, u64, u32, u32, char *);\n\
+|<f10>int (*session_destroy) (u32, u64);\n\
+|<f11>int (*session_info) (struct session_info *);\n\
+|<f12>int (*conn_create) (u32, u64, u32, u32, u32, int, u32, u32);\n\
+|<f13>int (*conn_destroy) (u32 tid, u64 sid, u32 cid);\n\
+"];
+}
+
+#relation 
+node_connection:<f18> -> node_PDU:f0;
+node_connection:<f20> -> node_PDU:f0;
+node_target:<f2> -> node_session:f0;
+node_target:<f11> -> node_session:f0;
+node_target:<f12> -> node_session:f0;
+node_connection:<f4> -> node_session:f0;
+node_connection:<f6> -> node_session:f0;
+node_connection:<f10> -> node_session:f0;
+node_iscsi_kernel_interface:<f9> -> node_session:f0;
+node_iscsi_kernel_interface:<f10> -> node_session:f0;
+node_iscsi_kernel_interface:<f11> -> node_session:f0;
+node_session:<f3> -> node_target:f0;
+node_iscsi_kernel_interface:<f7> -> node_target:f0;
+node_iscsi_kernel_interface:<f8> -> node_target:f0;
+
+}
