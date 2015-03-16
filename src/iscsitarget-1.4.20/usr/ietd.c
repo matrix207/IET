@@ -129,7 +129,7 @@ static void create_listen_socket(struct pollfd *array)
     /* bind */
 	hints.ai_flags = AI_PASSIVE;
 
-	/* 获取地址信息 ? */
+	/* 主机名为空，获取通配地址, 返回addrinfo结构信息res0中 */
 	if (getaddrinfo(server_address, servname, &hints, &res0)) {
 		log_error("unable to get address info (%s)!",
 			(errno == EAI_SYSTEM) ? strerror(errno) :
