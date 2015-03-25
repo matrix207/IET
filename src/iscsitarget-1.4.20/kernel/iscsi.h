@@ -182,7 +182,10 @@ struct iet_volume {
 	u8 scsi_id[SCSI_ID_LEN];
 	u8 scsi_sn[SCSI_SN_LEN + 1];
 
-	/* 块大小的幂的次数，如:1024=2^10, blk_shift值为10 */
+	/* 块大小的幂的次数，如:1024=2^10, blk_shift值为10
+	 * 由于块大小规定了范围(512~4096),所以blk_shift的值只能是9,10,11,12
+	 * 赋值位置: volume.c: parse_volume_params函数, volume->blk_shift = ilog2(blk_sz);
+	 */
 	u32 blk_shift;
 	u64 blk_cnt;
 

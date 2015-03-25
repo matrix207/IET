@@ -296,6 +296,10 @@ blockio_attach(struct iet_volume *volume, char *args)
 		goto out;
 	}
 
+	/* 为什么要取i_size, 
+	 * i_size表示以字节为单位的文件长度
+	 * blk_shift表示
+	 */
 	volume->blk_cnt = bio_data->bdev->bd_inode->i_size >> volume->blk_shift;
 
 	/* Offer neither write nor read caching */
